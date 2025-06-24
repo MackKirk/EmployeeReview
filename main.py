@@ -10,6 +10,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 DATA_DIR = "data"
+os.makedirs(DATA_DIR, exist_ok=True)
 
 QUESTIONS = ['Work quality', 'Punctuality', 'Attendance', 'Achievements in the last year', 'Areas for improvement', 'How the company or supervisor can support you', 'Professional goals for the next period']
 
@@ -61,3 +62,8 @@ async def list_names(request: Request, role: str):
     all_files = os.listdir(DATA_DIR)
     names = [f.replace(".json", "") for f in all_files if f.endswith(".json")]
     return templates.TemplateResponse("select.html", {"request": request, "role": role, "names": names})
+
+
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
