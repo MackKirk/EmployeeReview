@@ -3,67 +3,63 @@ from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-import os, json
+import os
+import json
 
 app = FastAPI()
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 DATA_DIR = "data"
+EMPLOYEES_FILE = os.path.join(DATA_DIR, "employees.json")
+
 os.makedirs(DATA_DIR, exist_ok=True)
-
-QUESTIONS = ['Work quality', 'Punctuality', 'Attendance', 'Achievements in the last year', 'Areas for improvement', 'How the company or supervisor can support you', 'Professional goals for the next period']
-
-def save_partial(name: str, role: str, entry: dict):
-    filepath = os.path.join(DATA_DIR, f"{name}.json")
-    if os.path.exists(filepath):
-        with open(filepath, "r") as f:
-            data = json.load(f)
-    else:
-        data = {}
-
-    if role not in data:
-        data[role] = {}
-
-    data[role].update(entry)
-
-    with open(filepath, "w") as f:
-        json.dump(data, f, indent=2)
-
-@app.get("/review/{role}/{name}", response_class=HTMLResponse)
-async def get_form(request: Request, role: str, name: str):
-    saved_data = {}
-    filepath = os.path.join(DATA_DIR, f"{name}.json")
-    if os.path.exists(filepath):
-        with open(filepath, "r") as f:
-            saved_data = json.load(f)
-            saved_data = saved_data.get(role, {})
-    return templates.TemplateResponse("form.html", {"request": request, "role": role, "name": name, "questions": QUESTIONS, "saved_data": saved_data})
-
-@app.post("/submit/{role}/{name}")
-async def submit_form(role: str, name: str, request: Request):
-    form_data = await request.form()
-    entry = {q: form_data.get(q) for q in QUESTIONS}
-    save_partial(name, role, entry)
-    return RedirectResponse(url=f"/compare/{name}", status_code=303)
-
-@app.get("/compare/{name}", response_class=HTMLResponse)
-async def compare(request: Request, name: str):
-    filepath = os.path.join(DATA_DIR, f"{name}.json")
-    if not os.path.exists(filepath):
-        return HTMLResponse(content="Review not found.", status_code=404)
-    with open(filepath, "r") as f:
-        data = json.load(f)
-    return templates.TemplateResponse("compare.html", {"request": request, "name": name, "data": data, "questions": QUESTIONS})
-
-
-@app.get("/select/{role}", response_class=HTMLResponse)
-async def list_names(request: Request, role: str):
-    all_files = os.listdir(DATA_DIR)
-    names = [f.replace(".json", "") for f in all_files if f.endswith(".json")]
-    return templates.TemplateResponse("select.html", {"request": request, "role": role, "names": names})
-
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+@app.get("/select/employee", response_class=HTMLResponse)
+async def select_employee(request: Request):
+    with open(EMPLOYEES_FILE) as f:
+        employees = json.load(f)
+    return templates.TemplateResponse("select_employee.html", {"request": request, "employees": employees})
+
+@app.get("/select/supervisor", response_class=HTMLResponse)
+async def select_supervisor(request: Request):
+    with open(EMPLOYEES_FILE) as f:
+        employees = json.load(f)
+    return templates.TemplateResponse("select_supervisor.html", {"request": request, "employees": employees})
+
+@app.get("/review/{name}/employee", response_class=HTMLResponse)
+async def review_employee_form(request: Request, name: str):
+    review_path = os.path.join(DATA_DIR, f"{name}_employee.json")
+    existing_data = {}
+    if os.path.exists(review_path):
+        with open(review_path) as f:
+            existing_data = json.load(f)
+    return templates.TemplateResponse("review_employee.html", {"request": request, "name": name, "data": existing_data})
+
+@app.post("/review/{name}/employee")
+async def submit_employee_review(request: Request, name: str, responses: str = Form(...)):
+    review_path = os.path.join(DATA_DIR, f"{name}_employee.json")
+    with open(review_path, "w") as f:
+        json.dump(json.loads(responses), f)
+    return RedirectResponse(url="/select/employee", status_code=303)
+
+@app.get("/review/{name}/supervisor", response_class=HTMLResponse)
+async def review_supervisor_form(request: Request, name: str):
+    review_path = os.path.join(DATA_DIR, f"{name}_supervisor.json")
+    existing_data = {}
+    if os.path.exists(review_path):
+        with open(review_path) as f:
+            existing_data = json.load(f)
+    return templates.TemplateResponse("review_supervisor.html", {"request": request, "name": name, "data": existing_data})
+
+@app.post("/review/{name}/supervisor")
+async def submit_supervisor_review(request: Request, name: str, responses: str = Form(...)):
+    review_path = os.path.join(DATA_DIR, f"{name}_supervisor.json")
+    with open(review_path, "w") as f:
+        json.dump(json.loads(responses), f)
+    return RedirectResponse(url="/select/supervisor", status_code=303)
