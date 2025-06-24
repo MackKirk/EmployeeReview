@@ -44,6 +44,7 @@ async def home(request: Request):
 
 @app.get("/select/{role}", response_class=HTMLResponse)
 async def select_role(request: Request, role: str):
+
     if role not in {"employee", "supervisor"}:
         return templates.TemplateResponse(
             "message.html",
@@ -54,6 +55,7 @@ async def select_role(request: Request, role: str):
             "password.html",
             {"request": request, "next": f"/select/{role}", "error": None},
         )
+
     employees = load_employees()
     if employees is None:
         return templates.TemplateResponse(
