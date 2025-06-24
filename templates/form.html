@@ -8,7 +8,7 @@
 <body class="bg-gray-100 p-8">
   <div class="max-w-3xl mx-auto bg-white p-6 shadow rounded">
     <h1 class="text-2xl font-bold mb-4">Review - {{ role.capitalize() }}: {{ name }}</h1>
-    <form method="post" action="/submit/{{ role }}/{{ name }}" class="space-y-6">
+    <form method="post" action="/review/{{ role }}/{{ name }}" class="space-y-6">
       {% for q in questions %}
         <div>
           <label class="block font-semibold mb-1">{{ q }}</label>
