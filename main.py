@@ -60,12 +60,14 @@ async def select_role(request: Request, role: str):
             "password.html",
             {"request": request, "next": f"/select/{role}", "role": role, "error": None},
         )
+
     employees = load_employees()
     if employees is None:
         return templates.TemplateResponse(
             "message.html",
             {"request": request, "message": "Unable to load employees."},
         )
+
     statuses = {}
     for n in employees:
         statuses[n] = {
