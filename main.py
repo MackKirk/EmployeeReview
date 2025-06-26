@@ -30,6 +30,7 @@ templates = Jinja2Templates(directory="templates")
 DATA_DIR = "data"
 EMPLOYEES_FILE = os.path.join(DATA_DIR, "employees.json")
 PASSWORD = os.getenv("SUPERVISOR_PASSWORD", "supersecret")
+DIRECTOR_PASSWORD = os.getenv("DIRECTOR_PASSWORD", "directorpass")
 
 QUESTIONS = [
     "Work quality",
@@ -59,8 +60,7 @@ async def home(request: Request):
 
 @app.get("/select/{role}", response_class=HTMLResponse)
 async def select_role(request: Request, role: str):
-
-    if role not in {"employee", "supervisor"}:
+    if role not in {"employee", "supervisor", "director"}:
         return templates.TemplateResponse(
             "message.html",
             {"request": request, "message": "Invalid role."},
@@ -68,7 +68,12 @@ async def select_role(request: Request, role: str):
     if role == "supervisor" and not request.session.get("supervisor_auth"):
         return templates.TemplateResponse(
             "password.html",
-            {"request": request, "next": f"/select/{role}", "error": None},
+            {"request": request, "next": f"/select/{role}", "role": role, "error": None},
+        )
+    if role == "director" and not request.session.get("director_auth"):
+        return templates.TemplateResponse(
+            "password.html",
+            {"request": request, "next": f"/select/{role}", "role": role, "error": None},
         )
 
     employees = load_employees()
@@ -77,8 +82,16 @@ async def select_role(request: Request, role: str):
             "message.html",
             {"request": request, "message": "Unable to load employees."},
         )
+
+    statuses = {}
+    for n in employees:
+        statuses[n] = {
+            "employee": os.path.exists(os.path.join(DATA_DIR, f"{n}_employee.json")),
+            "supervisor": os.path.exists(os.path.join(DATA_DIR, f"{n}_supervisor.json")),
+            "director": os.path.exists(os.path.join(DATA_DIR, f"{n}_director.json")),
+        }
     return templates.TemplateResponse(
-        "select.html", {"request": request, "role": role, "names": employees}
+        "select.html", {"request": request, "role": role, "names": employees, "statuses": statuses}
     )
 
 
@@ -98,7 +111,7 @@ async def get_review(request: Request, role: str, name: str):
     if role == "supervisor" and not request.session.get("supervisor_auth"):
         return templates.TemplateResponse(
             "password.html",
-            {"request": request, "next": f"/review/{role}/{name}", "error": None},
+            {"request": request, "next": f"/review/{role}/{name}", "role": role, "error": None},
         )
     review_path = os.path.join(DATA_DIR, f"{name}_{role}.json")
     if os.path.exists(review_path):
@@ -154,11 +167,59 @@ async def submit_review(request: Request, role: str, name: str, db: Session = De
 
 
 @app.post("/login")
-async def login(request: Request, password: str = Form(...), next: str = Form(...)):
-    if password == PASSWORD:
-        request.session["supervisor_auth"] = True
+async def login(
+    request: Request,
+    password: str = Form(...),
+    next: str = Form(...),
+    role: str = Form(...),
+):
+    expected = PASSWORD if role == "supervisor" else DIRECTOR_PASSWORD
+    if password == expected:
+        key = "supervisor_auth" if role == "supervisor" else "director_auth"
+        request.session[key] = True
         return RedirectResponse(url=next, status_code=303)
     return templates.TemplateResponse(
         "password.html",
-        {"request": request, "next": next, "error": "Incorrect password"},
+        {"request": request, "next": next, "role": role, "error": "Incorrect password"},
+    )
+
+
+@app.get("/compare/{name}", response_class=HTMLResponse)
+async def compare_reviews(request: Request, name: str):
+    if not request.session.get("director_auth"):
+        return templates.TemplateResponse(
+            "password.html",
+            {"request": request, "next": f"/compare/{name}", "role": "director", "error": None},
+        )
+    employees = load_employees()
+    if employees is None or name not in employees:
+        return templates.TemplateResponse(
+            "message.html",
+            {"request": request, "message": "Employee not found."},
+        )
+    data = {}
+    employee_file = os.path.join(DATA_DIR, f"{name}_employee.json")
+    supervisor_file = os.path.join(DATA_DIR, f"{name}_supervisor.json")
+    if os.path.exists(employee_file):
+        with open(employee_file) as f:
+            data["funcionario"] = json.load(f)
+    if os.path.exists(supervisor_file):
+        with open(supervisor_file) as f:
+            data["supervisor"] = json.load(f)
+    director_file = os.path.join(DATA_DIR, f"{name}_director.json")
+    if not os.path.exists(director_file):
+        try:
+            with open(director_file, "w") as f:
+                json.dump({"viewed": True}, f)
+            os.chmod(director_file, 0o600)
+        except Exception:
+            pass
+    return templates.TemplateResponse(
+        "compare.html",
+        {
+            "request": request,
+            "name": name.replace("_", " ").title(),
+            "questions": QUESTIONS,
+            "data": data,
+        },
     )
