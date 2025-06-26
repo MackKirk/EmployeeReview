@@ -6,6 +6,21 @@ from starlette.middleware.sessions import SessionMiddleware
 import os
 import json
 
+from sqlalchemy.orm import Session
+from db import SessionLocal, engine
+from models import Base, Review
+
+from fastapi import Depends
+
+Base.metadata.create_all(bind=engine)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 app = FastAPI()
 
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "changeme"))
@@ -104,7 +119,7 @@ async def get_review(request: Request, role: str, name: str):
 
 
 @app.post("/review/{role}/{name}")
-async def submit_review(request: Request, role: str, name: str):
+async def submit_review(request: Request, role: str, name: str, db: Session = Depends(get_db)):
     if role not in {"employee", "supervisor"}:
         return templates.TemplateResponse(
             "message.html",
@@ -116,23 +131,24 @@ async def submit_review(request: Request, role: str, name: str):
             "message.html",
             {"request": request, "message": "Employee not found."},
         )
-    review_path = os.path.join(DATA_DIR, f"{name}_{role}.json")
-    if os.path.exists(review_path):
+
+    # Verifica se o funcionário já tem review salvo
+    existing = db.query(Review).filter_by(employee_name=name, role=role).first()
+    if existing:
         return templates.TemplateResponse(
             "message.html",
             {"request": request, "message": "Review already submitted."},
         )
+
+    # Lê as respostas do formulário
     form_data = await request.form()
-    entry = {q: form_data.get(q, "") for q in QUESTIONS}
-    try:
-        with open(review_path, "w") as f:
-            json.dump(entry, f, indent=2)
-        os.chmod(review_path, 0o600)
-    except Exception:
-        return templates.TemplateResponse(
-            "message.html",
-            {"request": request, "message": "Could not save review."},
-        )
+    for q in QUESTIONS:
+        answer = form_data.get(q, "")
+        if answer:
+            review = Review(employee_name=name, role=role, question=q, answer=answer)
+            db.add(review)
+    db.commit()
+
     redirect = "/select/employee" if role == "employee" else "/select/supervisor"
     return RedirectResponse(url=redirect, status_code=303)
 
