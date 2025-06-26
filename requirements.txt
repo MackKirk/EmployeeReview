@@ -6,4 +6,3 @@ itsdangerous
 sqlalchemy
 psycopg2-binary
 uvicorn[standard]
-gunicorn
