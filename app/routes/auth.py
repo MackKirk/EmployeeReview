@@ -55,7 +55,7 @@ async def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/", status_code=302)
 
-@app.get("/usernames")
+@router.get("/usernames")
 def get_usernames():
     db = SessionLocal()
     names = db.query(Employee.name).all()
