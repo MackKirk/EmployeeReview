@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 from app.db import SessionLocal
 from app.models import Employee
 from app.utils.questions import questions
+from app.utils.auth_utils import get_current_user
+
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")

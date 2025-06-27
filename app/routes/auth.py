@@ -2,9 +2,6 @@ from fastapi import APIRouter, Request, Form
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from app.db import SessionLocal
-from app.models import Employee
-from datetime import datetime
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from app.db import SessionLocal
