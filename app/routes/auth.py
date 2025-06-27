@@ -5,6 +5,10 @@ from sqlalchemy.orm import Session
 from app.db import SessionLocal
 from app.models import Employee
 from datetime import datetime
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
+from app.db import SessionLocal
+from app.models import Employee  # ou Employee se for o modelo certo
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -31,6 +35,17 @@ async def login(request: Request, name: str = Form(...), birth_date: str = Form(
         request.session["role"] = user.role
         request.session["name"] = user.name
 
+        # Redireciona com base no papel
+        if user.role == "employee":
+            return RedirectResponse(f"/employee/{user.name}", status_code=302)
+        elif user.role == "supervisor":
+            return RedirectResponse(f"/supervisor/{user.name}", status_code=302)
+        elif user.role == "director":
+            return RedirectResponse("/director", status_code=302)
+        else:
+            return RedirectResponse("/", status_code=302)  # fallback em caso de role desconhecida
+
+
     finally:
         db.close()
 
@@ -39,3 +54,10 @@ async def login(request: Request, name: str = Form(...), birth_date: str = Form(
 async def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/", status_code=302)
+
+@app.get("/usernames")
+def get_usernames():
+    db = SessionLocal()
+    names = db.query(Employee.name).all()
+    db.close()
+    return JSONResponse([name[0] for name in names])
