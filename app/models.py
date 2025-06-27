@@ -1,0 +1,34 @@
+from sqlalchemy import Column, String, Date, Boolean, ForeignKey, DateTime, Text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
+import uuid
+from datetime import datetime
+
+Base = declarative_base()
+
+class Employee(Base):
+    __tablename__ = "employees"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, nullable=False)
+    birth_date = Column(Date, nullable=False)
+    supervisor_email = Column(String, nullable=True)
+    is_supervisor = Column(Boolean, default=False)
+    role = Column(String, default="employee")  # 'employee', 'supervisor', 'director'
+
+class Review(Base):
+    __tablename__ = "reviews"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    employee_id = Column(UUID(as_uuid=True), ForeignKey("employees.id"))
+    supervisor_id = Column(UUID(as_uuid=True), ForeignKey("employees.id"))
+    employee_answers = Column(JSONB, nullable=True)
+    supervisor_answers = Column(JSONB, nullable=True)
+    director_comments = Column(Text, nullable=True)
+    status = Column(String, default="draft")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    employee = relationship("Employee", foreign_keys=[employee_id])
+
