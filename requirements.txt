@@ -4,3 +4,4 @@ jinja2
 python-multipart
 sqlalchemy
 uvicorn[standard]
+itsdangerous>=2.0
