@@ -32,12 +32,7 @@ async def login(request: Request, name: str = Form(...), birth_date: str = Form(
         request.session["role"] = user.role
         request.session["name"] = user.name
 
-        if user.role == "employee":
-            return RedirectResponse(f"/employee/{user.id}", status_code=302)
-        elif user.role == "supervisor":
-            return RedirectResponse(f"/supervisor/{user.id}", status_code=302)
-        elif user.role == "director":
-            return RedirectResponse("/director/dashboard", status_code=302)
+        return RedirectResponse("/home", status_code=302)
 
 
     finally:
