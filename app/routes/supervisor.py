@@ -36,11 +36,21 @@ async def supervisor_dashboard(request: Request, supervisor_id: str):
         )
 
     subordinates = db.query(Employee).filter_by(supervisor_email=supervisor.email).all()
+    data = []
+    for emp in subordinates:
+        r = db.query(Review).filter_by(employee_id=emp.id).first()
+        employee_done = bool(r and r.employee_answers)
+        supervisor_done = bool(r and r.supervisor_answers)
+        data.append({
+            "employee": emp,
+            "employee_done": employee_done,
+            "supervisor_done": supervisor_done,
+        })
     db.close()
     return templates.TemplateResponse("supervisor_dashboard.html", {
         "request": request,
         "supervisor": supervisor,
-        "subordinates": subordinates
+        "subordinates": data,
     })
 
 
@@ -60,10 +70,19 @@ async def supervisor_review(request: Request, employee_id: str):
         db.close()
         return HTMLResponse("Acesso negado", status_code=403)
 
+    review = db.query(Review).filter_by(employee_id=employee.id).first()
+    existing = review.supervisor_answers if review else None
+    existing_map = {
+        a["question"]: a.get("value") for a in existing
+    } if existing else {}
+    readonly = bool(existing)
+    db.close()
     return templates.TemplateResponse("supervisor_review.html", {
         "request": request,
         "employee": employee,
-        "questions": questions
+        "questions": questions,
+        "existing_map": existing_map,
+        "readonly": readonly,
     })
 
 
@@ -105,10 +124,10 @@ async def submit_supervisor_review(request: Request, employee_id: str):
         review = Review(
             id=uuid.uuid4(),
             employee_id=employee.id,
-            supervisor_id=employee.id,
+            supervisor_id=current_user.id,
             supervisor_answers=answers,
             created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            updated_at=datetime.utcnow(),
         )
         db.add(review)
 
