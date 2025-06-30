@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.db import SessionLocal
@@ -46,7 +46,15 @@ async def save_director_comments(
     db.commit()
     db.close()
 
-    return RedirectResponse(url=f"/director/review/{employee_id}", status_code=302)
+    return templates.TemplateResponse(
+        "success.html",
+        {
+            "request": request,
+            "message": "✅ Avaliação salva com sucesso!",
+            "redirect_url": "/home",
+            "seconds": 5,
+        },
+    )
 
 
 @router.get("/director/dashboard", response_class=HTMLResponse)

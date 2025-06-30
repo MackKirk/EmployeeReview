@@ -134,4 +134,12 @@ async def submit_supervisor_review(request: Request, employee_id: str):
     db.commit()
     db.close()
 
-    return HTMLResponse("✅ Avaliação salva com sucesso!", status_code=200)
+    return templates.TemplateResponse(
+        "success.html",
+        {
+            "request": request,
+            "message": "✅ Avaliação salva com sucesso!",
+            "redirect_url": "/home",
+            "seconds": 5,
+        },
+    )

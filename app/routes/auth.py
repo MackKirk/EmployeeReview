@@ -16,8 +16,13 @@ async def show_login(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
 
+@router.get("/director-login", response_class=HTMLResponse)
+async def show_director_login(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request, "director_only": True})
+
+
 @router.post("/login")
-async def login(request: Request, name: str = Form(...), birth_date: str = Form(...)):
+async def login(request: Request, name: str = Form(...), birth_date: str = Form(...), required_role: str = Form(None)):
     db: Session = SessionLocal()
     try:
         user = db.query(Employee).filter(Employee.name == name).first()
@@ -27,6 +32,9 @@ async def login(request: Request, name: str = Form(...), birth_date: str = Form(
         expected = user.birth_date.strftime("%Y-%m-%d")
         if birth_date != expected:
             return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid birth date."})
+
+        if required_role and user.role != required_role:
+            return templates.TemplateResponse("login.html", {"request": request, "error": "Acesso restrito."})
 
         request.session["user_id"] = str(user.id)
         request.session["role"] = user.role
@@ -45,8 +53,11 @@ async def logout(request: Request):
     return RedirectResponse("/", status_code=302)
 
 @router.get("/usernames")
-def get_usernames():
+def get_usernames(role: str = None):
     db = SessionLocal()
-    names = db.query(Employee.name).all()
+    query = db.query(Employee.name)
+    if role:
+        query = query.filter(Employee.role == role)
+    names = query.all()
     db.close()
     return JSONResponse([name[0] for name in names])
