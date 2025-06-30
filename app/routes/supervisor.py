@@ -25,7 +25,11 @@ async def supervisor_dashboard(request: Request, supervisor_id: str):
     ):
         db.close()
         return HTMLResponse("Acesso negado", status_code=403)
-    if not supervisor or not supervisor.is_supervisor:
+    # Confirm that the target user exists and is actually a supervisor using the
+    # role field. Some databases might not populate the `is_supervisor` flag,
+    # which caused false negatives when a supervisor attempted to access their
+    # dashboard.
+    if not supervisor or supervisor.role != "supervisor":
         db.close()
         return HTMLResponse(
             "Supervisor não encontrado ou acesso negado", status_code=403
