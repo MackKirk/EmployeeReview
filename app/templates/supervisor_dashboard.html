@@ -12,7 +12,7 @@
       {% for emp in subordinates %}
       <li class="border p-3 rounded flex justify-between items-center">
         {{ emp.name }}
-        <a href="/employee/{{ emp.id }}" class="text-blue-600 hover:underline">Ver avaliação</a>
+        <a href="/supervisor/review/{{ emp.id }}" class="text-blue-600 hover:underline">Ver avaliação</a>
       </li>
       {% endfor %}
     </ul>
