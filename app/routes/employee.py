@@ -79,4 +79,12 @@ async def submit_employee_review(request: Request, employee_id: str):
     db.commit()
     db.close()
 
-    return HTMLResponse("✅ Respostas enviadas com sucesso!", status_code=200)
+    return templates.TemplateResponse(
+        "success.html",
+        {
+            "request": request,
+            "message": "✅ Respostas enviadas com sucesso!",
+            "redirect_url": "/home",
+            "seconds": 5,
+        },
+    )
