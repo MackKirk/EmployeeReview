@@ -1,13 +1,11 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.db import SessionLocal
-from app.models import Employee
-
-from fastapi import Form
 from app.models import Employee, Review
 from app.utils.questions import questions
+from app.utils.auth_utils import get_current_user
 import uuid
 from datetime import datetime
 
@@ -17,15 +15,21 @@ templates = Jinja2Templates(directory="app/templates")
 
 @router.get("/supervisor/{supervisor_id}", response_class=HTMLResponse)
 async def supervisor_dashboard(request: Request, supervisor_id: str):
+    current_user = get_current_user(request)
     db: Session = SessionLocal()
-
-    if not current_user or current_user.role != "supervisor" or current_user.email != employee.supervisor_email:
-        return HTMLResponse("Acesso negado", status_code=403)
-
     supervisor = db.query(Employee).filter_by(id=supervisor_id).first()
+    if (
+        not current_user
+        or current_user.role != "supervisor"
+        or str(current_user.id) != supervisor_id
+    ):
+        db.close()
+        return HTMLResponse("Acesso negado", status_code=403)
     if not supervisor or not supervisor.is_supervisor:
         db.close()
-        return HTMLResponse("Supervisor não encontrado ou acesso negado", status_code=403)
+        return HTMLResponse(
+            "Supervisor não encontrado ou acesso negado", status_code=403
+        )
 
     subordinates = db.query(Employee).filter_by(supervisor_email=supervisor.email).all()
     db.close()
@@ -38,16 +42,19 @@ async def supervisor_dashboard(request: Request, supervisor_id: str):
 
 @router.get("/supervisor/review/{employee_id}", response_class=HTMLResponse)
 async def supervisor_review(request: Request, employee_id: str):
+    current_user = get_current_user(request)
     db: Session = SessionLocal()
-
-    if not current_user or current_user.role != "supervisor" or current_user.email != employee.supervisor_email:
-        return HTMLResponse("Acesso negado", status_code=403)
-
-
     employee = db.query(Employee).filter_by(id=employee_id).first()
-    db.close()
     if not employee:
+        db.close()
         return HTMLResponse("Funcionário não encontrado", status_code=404)
+    if (
+        not current_user
+        or current_user.role != "supervisor"
+        or current_user.email != employee.supervisor_email
+    ):
+        db.close()
+        return HTMLResponse("Acesso negado", status_code=403)
 
     return templates.TemplateResponse("supervisor_review.html", {
         "request": request,
@@ -58,15 +65,19 @@ async def supervisor_review(request: Request, employee_id: str):
 
 @router.post("/supervisor/review/{employee_id}/submit")
 async def submit_supervisor_review(request: Request, employee_id: str):
+    current_user = get_current_user(request)
     db: Session = SessionLocal()
-
-    if not current_user or current_user.role != "supervisor" or current_user.email != employee.supervisor_email:
-        return HTMLResponse("Acesso negado", status_code=403)
-
     employee = db.query(Employee).filter_by(id=employee_id).first()
     if not employee:
         db.close()
         return HTMLResponse("Funcionário não encontrado", status_code=404)
+    if (
+        not current_user
+        or current_user.role != "supervisor"
+        or current_user.email != employee.supervisor_email
+    ):
+        db.close()
+        return HTMLResponse("Acesso negado", status_code=403)
 
     form = await request.form()
     answers = []
