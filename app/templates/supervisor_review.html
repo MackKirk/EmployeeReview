@@ -26,6 +26,7 @@
           {% elif q.type == "text" %}
             <textarea name="q{{ q.id }}" rows="4" class="w-full border p-2 rounded" {% if readonly %}disabled{% else %}required{% endif %}>{{ existing_map.get(q.question, '') }}</textarea>
           {% endif %}
+          <textarea name="c{{ q.id }}" rows="2" class="w-full border p-2 rounded mt-2" placeholder="Comentário (opcional)" {% if readonly %}disabled{% endif %}>{{ comment_map.get(q.question, '') }}</textarea>
         </div>
       {% endfor %}
 
