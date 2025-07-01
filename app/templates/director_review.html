@@ -12,7 +12,7 @@
       <div>
         <h2 class="text-xl font-semibold mb-2">Autoavaliação</h2>
         <ul class="space-y-4">
-          {% for answer in review.employee_answers %}
+          {% for answer in review.employee_answers or [] %}
             <li>
               <strong>{{ answer.question }}</strong><br />
               {% if answer.type == "scale" %}
@@ -20,6 +20,7 @@
               {% else %}
                 {{ answer.value }}
               {% endif %}
+              {% if answer.comment %}<br /><em>Comentário: {{ answer.comment }}</em>{% endif %}
             </li>
           {% endfor %}
         </ul>
@@ -28,7 +29,7 @@
       <div>
         <h2 class="text-xl font-semibold mb-2">Avaliação do Supervisor</h2>
         <ul class="space-y-4">
-          {% for answer in review.supervisor_answers %}
+          {% for answer in review.supervisor_answers or [] %}
             <li>
               <strong>{{ answer.question }}</strong><br />
               {% if answer.type == "scale" %}
@@ -36,6 +37,7 @@
               {% else %}
                 {{ answer.value }}
               {% endif %}
+              {% if answer.comment %}<br /><em>Comentário: {{ answer.comment }}</em>{% endif %}
             </li>
           {% endfor %}
         </ul>

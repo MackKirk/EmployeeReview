@@ -20,8 +20,11 @@ async def supervisor_dashboard(request: Request, supervisor_id: str):
     supervisor = db.query(Employee).filter_by(id=supervisor_id).first()
     if (
         not current_user
-        or current_user.role != "supervisor"
         or str(current_user.id) != supervisor_id
+        or not (
+            current_user.role == "supervisor"
+            or (current_user.role == "director" and current_user.is_supervisor)
+        )
     ):
         db.close()
         return HTMLResponse("Acesso negado", status_code=403)
@@ -29,7 +32,9 @@ async def supervisor_dashboard(request: Request, supervisor_id: str):
     # role field. Some databases might not populate the `is_supervisor` flag,
     # which caused false negatives when a supervisor attempted to access their
     # dashboard.
-    if not supervisor or supervisor.role != "supervisor":
+    if not supervisor or not (
+        supervisor.role == "supervisor" or supervisor.is_supervisor
+    ):
         db.close()
         return HTMLResponse(
             "Supervisor não encontrado ou acesso negado", status_code=403
@@ -64,17 +69,19 @@ async def supervisor_review(request: Request, employee_id: str):
         return HTMLResponse("Funcionário não encontrado", status_code=404)
     if (
         not current_user
-        or current_user.role != "supervisor"
         or current_user.email != employee.supervisor_email
+        or not (
+            current_user.role == "supervisor"
+            or (current_user.role == "director" and current_user.is_supervisor)
+        )
     ):
         db.close()
         return HTMLResponse("Acesso negado", status_code=403)
 
     review = db.query(Review).filter_by(employee_id=employee.id).first()
     existing = review.supervisor_answers if review else None
-    existing_map = {
-        a["question"]: a.get("value") for a in existing
-    } if existing else {}
+    existing_map = {a["question"]: a.get("value") for a in existing} if existing else {}
+    comment_map = {a["question"]: a.get("comment") for a in existing} if existing else {}
     readonly = bool(existing)
     db.close()
     return templates.TemplateResponse("supervisor_review.html", {
@@ -83,6 +90,7 @@ async def supervisor_review(request: Request, employee_id: str):
         "questions": questions,
         "existing_map": existing_map,
         "readonly": readonly,
+        "comment_map": comment_map,
     })
 
 
@@ -96,8 +104,11 @@ async def submit_supervisor_review(request: Request, employee_id: str):
         return HTMLResponse("Funcionário não encontrado", status_code=404)
     if (
         not current_user
-        or current_user.role != "supervisor"
         or current_user.email != employee.supervisor_email
+        or not (
+            current_user.role == "supervisor"
+            or (current_user.role == "director" and current_user.is_supervisor)
+        )
     ):
         db.close()
         return HTMLResponse("Acesso negado", status_code=403)
@@ -107,13 +118,17 @@ async def submit_supervisor_review(request: Request, employee_id: str):
 
     for q in questions:
         value = form.get(f"q{q['id']}")
+        comment = form.get(f"c{q['id']}")
         if q["type"] == "scale":
             value = int(value) if value else None
-        answers.append({
-            "question": q["question"],
-            "type": q["type"],
-            "value": value
-        })
+        answers.append(
+            {
+                "question": q["question"],
+                "type": q["type"],
+                "value": value,
+                "comment": comment,
+            }
+        )
 
     # Cria ou atualiza review
     existing = db.query(Review).filter_by(employee_id=employee.id).first()

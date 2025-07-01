@@ -24,7 +24,7 @@ async def home(request: Request):
 
     # Pending reviews for supervisor
     supervisor_pending = 0
-    if user.role == "supervisor":
+    if user.role == "supervisor" or user.is_supervisor:
         subordinates = db.query(Employee).filter_by(supervisor_email=user.email).all()
         for emp in subordinates:
             r = db.query(Review).filter_by(employee_id=emp.id).first()
@@ -45,7 +45,7 @@ async def home(request: Request):
         "request": request,
         "user": user,
         "employee_card_title": employee_card_title,
-        "show_supervisor_card": user.role == "supervisor",
+        "show_supervisor_card": user.role == "supervisor" or user.is_supervisor,
         "show_director_card": user.role == "director",
         "supervisor_pending": supervisor_pending,
         "director_pending": director_pending,

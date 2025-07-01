@@ -22,6 +22,10 @@ async def director_view_review(request: Request, employee_id: str):
         db.close()
         return HTMLResponse("Funcionário ou avaliação não encontrada.", status_code=404)
 
+    if not review.employee_answers or not review.supervisor_answers:
+        db.close()
+        return HTMLResponse("Avaliação incompleta.", status_code=400)
+
     return templates.TemplateResponse("director_review.html", {
         "request": request,
         "employee": employee,
