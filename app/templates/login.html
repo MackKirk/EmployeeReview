@@ -13,7 +13,7 @@
     {% if error %}
     <p class="text-center text-red-600">{{ error }}</p>
     {% endif %}
-    <div x-data="{ query: '', users: [], filtered: [] }" x-init="fetch('/usernames{% if director_only %}?role=director{% endif %}').then(res => res.json()).then(data => users = data)">
+    <div x-data="{ query: '', users: [], filtered: [] }" x-init="fetch('/usernames{% if director_only %}?role=director{% else %}?exclude_directors=1{% endif %}').then(res => res.json()).then(data => users = data)">
       <label class="block font-semibold">Name</label>
       <input name="name" x-model="query" @input="filtered = users.filter(u => u.toLowerCase().includes(query.toLowerCase())).slice(0, 5)" type="text" placeholder="Start typing your name..." class="w-full p-2 border rounded" required autocomplete="off">
       <ul class="bg-white border rounded mt-1" x-show="filtered.length > 0">

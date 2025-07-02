@@ -8,47 +8,34 @@
   <div class="max-w-5xl mx-auto bg-white p-6 rounded shadow">
     <h1 class="text-2xl font-bold mb-6">Final Review of {{ employee.name }}</h1>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
-      <div>
-        <h2 class="text-xl font-semibold mb-2">Self Review</h2>
-        <ul class="space-y-4">
-          {% for answer in review.employee_answers or [] %}
-            <li>
-              <strong>{{ answer.question }}</strong><br />
-              {% if answer.type == "scale" %}
-                Rating: {{ answer.value }}
+    <form method="post" action="/director/review/{{ employee.id }}/submit" class="space-y-6">
+      {% for idx, q in enumerate(questions) %}
+        <div>
+          <p class="font-semibold mb-1">{{ q.question }}</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-2">
+            <div>
+              <strong>Self:</strong>
+              {% set ans = review.employee_answers[idx] %}
+              {% if ans.type == 'scale' %}
+                {{ ans.value }}
               {% else %}
-                {{ answer.value }}
+                {{ ans.value }}
               {% endif %}
-              {% if answer.comment %}<br /><em>Comment: {{ answer.comment }}</em>{% endif %}
-            </li>
-          {% endfor %}
-        </ul>
-      </div>
-
-      <div>
-        <h2 class="text-xl font-semibold mb-2">Supervisor Review</h2>
-        <ul class="space-y-4">
-          {% for answer in review.supervisor_answers or [] %}
-            <li>
-              <strong>{{ answer.question }}</strong><br />
-              {% if answer.type == "scale" %}
-                Rating: {{ answer.value }}
+            </div>
+            <div>
+              <strong>Supervisor:</strong>
+              {% set ans = review.supervisor_answers[idx] %}
+              {% if ans.type == 'scale' %}
+                {{ ans.value }}
               {% else %}
-                {{ answer.value }}
+                {{ ans.value }}
               {% endif %}
-              {% if answer.comment %}<br /><em>Comment: {{ answer.comment }}</em>{% endif %}
-            </li>
-          {% endfor %}
-        </ul>
-      </div>
-    </div>
-
-    <form method="post" action="/director/review/{{ employee.id }}/submit">
-      <div class="mb-4">
-        <label class="block font-semibold mb-1">Director Comments:</label>
-        <textarea name="director_comments" rows="6" class="w-full border p-2 rounded">{{ review.director_comments or '' }}</textarea>
-      </div>
+              {% if ans.comment %}<br /><em>Comment: {{ ans.comment }}</em>{% endif %}
+            </div>
+          </div>
+          <textarea name="c{{ q.id }}" rows="3" class="w-full border p-2 rounded" placeholder="Director comment">{{ comment_map.get(q.question, '') }}</textarea>
+        </div>
+      {% endfor %}
 
       <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
         Save Comments
