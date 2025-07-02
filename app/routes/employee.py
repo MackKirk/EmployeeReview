@@ -22,13 +22,19 @@ async def employee_review(request: Request, employee_id: str):
 
     db: Session = SessionLocal()
     employee = db.query(Employee).filter_by(id=employee_id).first()
+    review = db.query(Review).filter_by(employee_id=employee_id).first()
+    existing = review.employee_answers if review else None
+    existing_map = {a["question"]: a.get("value") for a in existing} if existing else {}
+    readonly = bool(existing)
     db.close()
     if not employee:
         return HTMLResponse("Employee not found", status_code=404)
     return templates.TemplateResponse("employee_review.html", {
         "request": request,
         "employee": employee,
-        "questions": questions
+        "questions": questions,
+        "existing_map": existing_map,
+        "readonly": readonly,
     })
 
 
@@ -63,7 +69,10 @@ async def submit_employee_review(request: Request, employee_id: str):
 
     # Create or update review
     existing = db.query(Review).filter_by(employee_id=employee.id).first()
-    if existing:
+    if existing and existing.employee_answers:
+        db.close()
+        return HTMLResponse("Review already submitted", status_code=400)
+    elif existing:
         existing.employee_answers = answers
         existing.updated_at = datetime.utcnow()
     else:
