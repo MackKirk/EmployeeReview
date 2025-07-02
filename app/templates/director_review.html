@@ -1,43 +1,43 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Revisão Final do Diretor</title>
+  <title>Director Final Review</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100 p-6">
   <div class="max-w-5xl mx-auto bg-white p-6 rounded shadow">
-    <h1 class="text-2xl font-bold mb-6">Revisão Final de {{ employee.name }}</h1>
+    <h1 class="text-2xl font-bold mb-6">Final Review of {{ employee.name }}</h1>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
       <div>
-        <h2 class="text-xl font-semibold mb-2">Autoavaliação</h2>
+        <h2 class="text-xl font-semibold mb-2">Self Review</h2>
         <ul class="space-y-4">
           {% for answer in review.employee_answers or [] %}
             <li>
               <strong>{{ answer.question }}</strong><br />
               {% if answer.type == "scale" %}
-                Nota: {{ answer.value }}
+                Rating: {{ answer.value }}
               {% else %}
                 {{ answer.value }}
               {% endif %}
-              {% if answer.comment %}<br /><em>Comentário: {{ answer.comment }}</em>{% endif %}
+              {% if answer.comment %}<br /><em>Comment: {{ answer.comment }}</em>{% endif %}
             </li>
           {% endfor %}
         </ul>
       </div>
 
       <div>
-        <h2 class="text-xl font-semibold mb-2">Avaliação do Supervisor</h2>
+        <h2 class="text-xl font-semibold mb-2">Supervisor Review</h2>
         <ul class="space-y-4">
           {% for answer in review.supervisor_answers or [] %}
             <li>
               <strong>{{ answer.question }}</strong><br />
               {% if answer.type == "scale" %}
-                Nota: {{ answer.value }}
+                Rating: {{ answer.value }}
               {% else %}
                 {{ answer.value }}
               {% endif %}
-              {% if answer.comment %}<br /><em>Comentário: {{ answer.comment }}</em>{% endif %}
+              {% if answer.comment %}<br /><em>Comment: {{ answer.comment }}</em>{% endif %}
             </li>
           {% endfor %}
         </ul>
@@ -46,12 +46,12 @@
 
     <form method="post" action="/director/review/{{ employee.id }}/submit">
       <div class="mb-4">
-        <label class="block font-semibold mb-1">Comentários do Diretor:</label>
+        <label class="block font-semibold mb-1">Director Comments:</label>
         <textarea name="director_comments" rows="6" class="w-full border p-2 rounded">{{ review.director_comments or '' }}</textarea>
       </div>
 
       <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-        Salvar Comentários
+        Save Comments
       </button>
     </form>
   </div>

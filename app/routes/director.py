@@ -17,14 +17,14 @@ async def director_view_review(request: Request, employee_id: str):
     review = db.query(Review).filter_by(employee_id=employee_id).first()
     if not current_user or current_user.role != "director":
         db.close()
-        return HTMLResponse("Acesso restrito", status_code=403)
+        return HTMLResponse("Access restricted", status_code=403)
     if not employee or not review:
         db.close()
-        return HTMLResponse("Funcionário ou avaliação não encontrada.", status_code=404)
+        return HTMLResponse("Employee or review not found.", status_code=404)
 
     if not review.employee_answers or not review.supervisor_answers:
         db.close()
-        return HTMLResponse("Avaliação incompleta.", status_code=400)
+        return HTMLResponse("Incomplete review.", status_code=400)
 
     return templates.TemplateResponse("director_review.html", {
         "request": request,
@@ -41,10 +41,10 @@ async def save_director_comments(
     review = db.query(Review).filter_by(employee_id=employee_id).first()
     if not current_user or current_user.role != "director":
         db.close()
-        return HTMLResponse("Acesso restrito", status_code=403)
+        return HTMLResponse("Access restricted", status_code=403)
     if not review:
         db.close()
-        return HTMLResponse("Avaliação não encontrada.", status_code=404)
+        return HTMLResponse("Review not found.", status_code=404)
 
     review.director_comments = director_comments
     db.commit()
@@ -54,7 +54,7 @@ async def save_director_comments(
         "success.html",
         {
             "request": request,
-            "message": "✅ Avaliação salva com sucesso!",
+            "message": "✅ Review saved successfully!",
             "redirect_url": "/home",
             "seconds": 5,
         },
@@ -67,7 +67,7 @@ async def director_dashboard(request: Request):
     db: Session = SessionLocal()
     if not current_user or current_user.role != "director":
         db.close()
-        return HTMLResponse("Acesso restrito", status_code=403)
+        return HTMLResponse("Access restricted", status_code=403)
 
     from sqlalchemy.orm import joinedload
     reviews = db.query(Review).options(joinedload(Review.employee)).all()

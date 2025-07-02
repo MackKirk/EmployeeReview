@@ -6,9 +6,13 @@
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </head>
-<body class="bg-gray-100 flex items-center justify-center h-screen">
+<body class="bg-gradient-to-r from-blue-400 to-purple-600 flex items-center justify-center h-screen">
   <form method="post" action="/login" class="bg-white p-6 rounded shadow-md w-full max-w-sm space-y-4">
-    <h2 class="text-2xl font-bold text-center mb-4">Login</h2>
+    <img src="/static/logo.png" alt="Logo" class="h-12 mx-auto mb-2" />
+    <h2 class="text-2xl font-bold text-center mb-2">Login</h2>
+    {% if error %}
+    <p class="text-center text-red-600">{{ error }}</p>
+    {% endif %}
     <div x-data="{ query: '', users: [], filtered: [] }" x-init="fetch('/usernames{% if director_only %}?role=director{% endif %}').then(res => res.json()).then(data => users = data)">
       <label class="block font-semibold">Name</label>
       <input name="name" x-model="query" @input="filtered = users.filter(u => u.toLowerCase().includes(query.toLowerCase())).slice(0, 5)" type="text" placeholder="Start typing your name..." class="w-full p-2 border rounded" required autocomplete="off">
@@ -19,9 +23,15 @@
       </ul>
     </div>
     <div>
+      {% if director_only %}
+      <label class="block font-semibold">Password</label>
+      <input name="password" type="password" class="w-full p-2 border rounded" required />
+      <input type="hidden" name="required_role" value="director">
+      {% else %}
       <label class="block font-semibold">Birth Date</label>
       <input name="birth_date" type="date" class="w-full p-2 border rounded" required />
-      <input type="hidden" name="required_role" value="{{ "director" if director_only else "" }}">
+      <input type="hidden" name="required_role" value="">
+      {% endif %}
     </div>
     <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Login</button>
   </form>

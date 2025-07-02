@@ -14,6 +14,7 @@ class Employee(Base):
     name = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False)
     birth_date = Column(Date, nullable=False)
+    password = Column(String, nullable=True)
     supervisor_email = Column(String, nullable=True)
     is_supervisor = Column(Boolean, default=False)
     role = Column(String, default="employee")  # 'employee', 'supervisor', 'director'

@@ -18,13 +18,13 @@ async def employee_review(request: Request, employee_id: str):
 
     current_user = get_current_user(request)
     if not current_user or str(current_user.id) != employee_id:
-        return HTMLResponse("Acesso negado", status_code=403)
+        return HTMLResponse("Access denied", status_code=403)
 
     db: Session = SessionLocal()
     employee = db.query(Employee).filter_by(id=employee_id).first()
     db.close()
     if not employee:
-        return HTMLResponse("Funcionário não encontrado", status_code=404)
+        return HTMLResponse("Employee not found", status_code=404)
     return templates.TemplateResponse("employee_review.html", {
         "request": request,
         "employee": employee,
@@ -39,12 +39,12 @@ async def submit_employee_review(request: Request, employee_id: str):
 
     current_user = get_current_user(request)
     if not current_user or str(current_user.id) != employee_id:
-        return HTMLResponse("Acesso negado", status_code=403)
+        return HTMLResponse("Access denied", status_code=403)
 
     employee = db.query(Employee).filter_by(id=employee_id).first()
     if not employee:
         db.close()
-        return HTMLResponse("Funcionário não encontrado", status_code=404)
+        return HTMLResponse("Employee not found", status_code=404)
 
     from app.utils.questions import questions
 
@@ -61,7 +61,7 @@ async def submit_employee_review(request: Request, employee_id: str):
             "value": value
         })
 
-    # Cria ou atualiza review
+    # Create or update review
     existing = db.query(Review).filter_by(employee_id=employee.id).first()
     if existing:
         existing.employee_answers = answers
@@ -83,7 +83,7 @@ async def submit_employee_review(request: Request, employee_id: str):
         "success.html",
         {
             "request": request,
-            "message": "✅ Respostas enviadas com sucesso!",
+            "message": "✅ Answers submitted successfully!",
             "redirect_url": "/home",
             "seconds": 5,
         },

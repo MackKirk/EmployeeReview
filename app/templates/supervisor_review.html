@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Avaliação do Supervisor</title>
+  <title>Supervisor Review</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100 p-6">
   <div class="max-w-3xl mx-auto bg-white p-6 rounded shadow">
-    <h1 class="text-2xl font-bold mb-4">Avaliação de {{ employee.name }}</h1>
+    <h1 class="text-2xl font-bold mb-4">Review of {{ employee.name }}</h1>
     <form method="post" action="/supervisor/review/{{ employee.id }}/submit" class="space-y-6">
 
       {% for q in questions %}
@@ -26,12 +26,12 @@
           {% elif q.type == "text" %}
             <textarea name="q{{ q.id }}" rows="4" class="w-full border p-2 rounded" {% if readonly %}disabled{% else %}required{% endif %}>{{ existing_map.get(q.question, '') }}</textarea>
           {% endif %}
-          <textarea name="c{{ q.id }}" rows="2" class="w-full border p-2 rounded mt-2" placeholder="Comentário (opcional)" {% if readonly %}disabled{% endif %}>{{ comment_map.get(q.question, '') }}</textarea>
+          <textarea name="c{{ q.id }}" rows="2" class="w-full border p-2 rounded mt-2" placeholder="Comment (optional)" {% if readonly %}disabled{% endif %}>{{ comment_map.get(q.question, '') }}</textarea>
         </div>
       {% endfor %}
 
       {% if not readonly %}
-      <button type="submit" class="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">Salvar Avaliação</button>
+      <button type="submit" class="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">Save Review</button>
       {% endif %}
     </form>
   </div>

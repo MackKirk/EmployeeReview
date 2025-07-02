@@ -1,20 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Dashboard do Diretor</title>
+  <title>Director Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100 p-6">
   <div class="max-w-5xl mx-auto bg-white p-6 rounded shadow">
-    <h1 class="text-2xl font-bold mb-6">Dashboard do Diretor</h1>
+    <h1 class="text-2xl font-bold mb-6">Director Dashboard</h1>
     <table class="w-full table-auto border">
       <thead>
         <tr class="bg-gray-200 text-left">
-          <th class="p-2">Funcionário</th>
-          <th class="p-2 text-center">Auto</th>
+          <th class="p-2">Employee</th>
+          <th class="p-2 text-center">Self</th>
           <th class="p-2 text-center">Supervisor</th>
-          <th class="p-2 text-center">Diretor</th>
-          <th class="p-2 text-center">Ação</th>
+          <th class="p-2 text-center">Director</th>
+          <th class="p-2 text-center">Action</th>
         </tr>
       </thead>
       <tbody>
@@ -31,7 +31,7 @@
             {% if r.director_comments %}✅{% else %}❌{% endif %}
           </td>
           <td class="p-2 text-center">
-            <a href="/director/review/{{ r.employee.id }}" class="text-blue-600 hover:underline">Ver</a>
+            <a href="/director/review/{{ r.employee.id }}" class="text-blue-600 hover:underline">View</a>
           </td>
         </tr>
         {% endfor %}

@@ -22,19 +22,42 @@ async def show_director_login(request: Request):
 
 
 @router.post("/login")
-async def login(request: Request, name: str = Form(...), birth_date: str = Form(...), required_role: str = Form(None)):
+async def login(
+    request: Request,
+    name: str = Form(...),
+    birth_date: str = Form(None),
+    password: str = Form(None),
+    required_role: str = Form(None),
+):
     db: Session = SessionLocal()
     try:
         user = db.query(Employee).filter(Employee.name == name).first()
         if not user:
             return templates.TemplateResponse("login.html", {"request": request, "error": "User not found."})
 
-        expected = user.birth_date.strftime("%Y-%m-%d")
-        if birth_date != expected:
-            return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid birth date."})
-
         if required_role and user.role != required_role:
-            return templates.TemplateResponse("login.html", {"request": request, "error": "Acesso restrito."})
+            return templates.TemplateResponse("login.html", {"request": request, "error": "Access restricted.", "director_only": required_role == "director"})
+
+        if required_role == "director":
+            if password != user.password:
+                return templates.TemplateResponse(
+                    "login.html",
+                    {
+                        "request": request,
+                        "error": "Invalid password.",
+                        "director_only": True,
+                    },
+                )
+        else:
+            expected = user.birth_date.strftime("%Y-%m-%d")
+            if birth_date != expected:
+                return templates.TemplateResponse(
+                    "login.html",
+                    {
+                        "request": request,
+                        "error": "Invalid birth date.",
+                    },
+                )
 
         request.session["user_id"] = str(user.id)
         request.session["role"] = user.role

@@ -13,14 +13,14 @@ templates = Jinja2Templates(directory="app/templates")
 async def home(request: Request):
     user = get_current_user(request)
     if not user:
-        return HTMLResponse("Acesso negado", status_code=403)
+        return HTMLResponse("Access denied", status_code=403)
 
     db: Session = SessionLocal()
 
     # Review of the logged in user
     review = db.query(Review).filter_by(employee_id=user.id).first()
     filled = review and review.employee_answers
-    employee_card_title = "Ver minhas respostas" if filled else "Preencher autoavaliação"
+    employee_card_title = "View my answers" if filled else "Fill self review"
 
     # Pending reviews for supervisor
     supervisor_pending = 0
