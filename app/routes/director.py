@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.db import SessionLocal
 from app.models import Employee, Review
 from app.utils.auth_utils import get_current_user
+from app.utils.questions import questions
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -25,17 +26,22 @@ async def director_view_review(request: Request, employee_id: str):
     if not review.employee_answers or not review.supervisor_answers:
         db.close()
         return HTMLResponse("Incomplete review.", status_code=400)
+    existing = review.director_comments or []
+    comment_map = {c["question"]: c.get("comment") for c in existing}
 
-    return templates.TemplateResponse("director_review.html", {
-        "request": request,
-        "employee": employee,
-        "review": review
-    })
+    return templates.TemplateResponse(
+        "director_review.html",
+        {
+            "request": request,
+            "employee": employee,
+            "review": review,
+            "questions": questions,
+            "comment_map": comment_map,
+        },
+    )
 
 @router.post("/director/review/{employee_id}/submit")
-async def save_director_comments(
-    request: Request, employee_id: str, director_comments: str = Form(...)
-):
+async def save_director_comments(request: Request, employee_id: str):
     current_user = get_current_user(request)
     db: Session = SessionLocal()
     review = db.query(Review).filter_by(employee_id=employee_id).first()
@@ -46,7 +52,13 @@ async def save_director_comments(
         db.close()
         return HTMLResponse("Review not found.", status_code=404)
 
-    review.director_comments = director_comments
+    form = await request.form()
+    comments = []
+    for q in questions:
+        comment = form.get(f"c{q['id']}")
+        comments.append({"question": q["question"], "comment": comment})
+
+    review.director_comments = comments
     db.commit()
     db.close()
 

@@ -76,11 +76,13 @@ async def logout(request: Request):
     return RedirectResponse("/", status_code=302)
 
 @router.get("/usernames")
-def get_usernames(role: str = None):
+def get_usernames(role: str = None, exclude_directors: bool = False):
     db = SessionLocal()
     query = db.query(Employee.name)
     if role:
         query = query.filter(Employee.role == role)
+    elif exclude_directors:
+        query = query.filter(Employee.role != "director")
     names = query.all()
     db.close()
     return JSONResponse([name[0] for name in names])

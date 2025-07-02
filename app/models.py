@@ -27,7 +27,7 @@ class Review(Base):
     supervisor_id = Column(UUID(as_uuid=True), ForeignKey("employees.id"))
     employee_answers = Column(JSONB, nullable=True)
     supervisor_answers = Column(JSONB, nullable=True)
-    director_comments = Column(Text, nullable=True)
+    director_comments = Column(JSONB, nullable=True)
     status = Column(String, default="draft")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
