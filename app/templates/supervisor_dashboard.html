@@ -6,15 +6,15 @@
 </head>
 <body class="bg-gray-100 p-8">
   <div class="max-w-3xl mx-auto bg-white p-6 rounded shadow">
-    <h1 class="text-2xl font-bold mb-4">Olá, {{ supervisor.name }}!</h1>
-    <p class="mb-4">Aqui estão os funcionários que você supervisiona:</p>
+    <h1 class="text-2xl font-bold mb-4">Hello, {{ supervisor.name }}!</h1>
+    <p class="mb-4">Here are the employees you supervise:</p>
     <table class="w-full table-auto border">
       <thead>
         <tr class="bg-gray-200 text-left">
-          <th class="p-2">Funcionário</th>
-          <th class="p-2 text-center">Auto</th>
+          <th class="p-2">Employee</th>
+          <th class="p-2 text-center">Self</th>
           <th class="p-2 text-center">Supervisor</th>
-          <th class="p-2 text-center">Ação</th>
+          <th class="p-2 text-center">Action</th>
         </tr>
       </thead>
       <tbody>
@@ -25,9 +25,9 @@
           <td class="p-2 text-center">{% if item.supervisor_done %}✅{% else %}❌{% endif %}</td>
           <td class="p-2 text-center">
             {% if item.supervisor_done %}
-              <a href="/supervisor/review/{{ item.employee.id }}" class="text-blue-600 hover:underline">Ver respostas</a>
+              <a href="/supervisor/review/{{ item.employee.id }}" class="text-blue-600 hover:underline">View answers</a>
             {% else %}
-              <a href="/supervisor/review/{{ item.employee.id }}" class="text-blue-600 hover:underline">Iniciar avaliação</a>
+              <a href="/supervisor/review/{{ item.employee.id }}" class="text-blue-600 hover:underline">Start review</a>
             {% endif %}
           </td>
         </tr>

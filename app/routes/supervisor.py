@@ -27,7 +27,7 @@ async def supervisor_dashboard(request: Request, supervisor_id: str):
         )
     ):
         db.close()
-        return HTMLResponse("Acesso negado", status_code=403)
+        return HTMLResponse("Access denied", status_code=403)
     # Confirm that the target user exists and is actually a supervisor using the
     # role field. Some databases might not populate the `is_supervisor` flag,
     # which caused false negatives when a supervisor attempted to access their
@@ -37,7 +37,7 @@ async def supervisor_dashboard(request: Request, supervisor_id: str):
     ):
         db.close()
         return HTMLResponse(
-            "Supervisor não encontrado ou acesso negado", status_code=403
+            "Supervisor not found or access denied", status_code=403
         )
 
     subordinates = db.query(Employee).filter_by(supervisor_email=supervisor.email).all()
@@ -66,7 +66,7 @@ async def supervisor_review(request: Request, employee_id: str):
     employee = db.query(Employee).filter_by(id=employee_id).first()
     if not employee:
         db.close()
-        return HTMLResponse("Funcionário não encontrado", status_code=404)
+        return HTMLResponse("Employee not found", status_code=404)
     if (
         not current_user
         or current_user.email != employee.supervisor_email
@@ -76,7 +76,7 @@ async def supervisor_review(request: Request, employee_id: str):
         )
     ):
         db.close()
-        return HTMLResponse("Acesso negado", status_code=403)
+        return HTMLResponse("Access denied", status_code=403)
 
     review = db.query(Review).filter_by(employee_id=employee.id).first()
     existing = review.supervisor_answers if review else None
@@ -101,7 +101,7 @@ async def submit_supervisor_review(request: Request, employee_id: str):
     employee = db.query(Employee).filter_by(id=employee_id).first()
     if not employee:
         db.close()
-        return HTMLResponse("Funcionário não encontrado", status_code=404)
+        return HTMLResponse("Employee not found", status_code=404)
     if (
         not current_user
         or current_user.email != employee.supervisor_email
@@ -111,7 +111,7 @@ async def submit_supervisor_review(request: Request, employee_id: str):
         )
     ):
         db.close()
-        return HTMLResponse("Acesso negado", status_code=403)
+        return HTMLResponse("Access denied", status_code=403)
 
     form = await request.form()
     answers = []
@@ -130,7 +130,7 @@ async def submit_supervisor_review(request: Request, employee_id: str):
             }
         )
 
-    # Cria ou atualiza review
+    # Create or update review
     existing = db.query(Review).filter_by(employee_id=employee.id).first()
     if existing:
         existing.supervisor_answers = answers
@@ -153,7 +153,7 @@ async def submit_supervisor_review(request: Request, employee_id: str):
         "success.html",
         {
             "request": request,
-            "message": "✅ Avaliação salva com sucesso!",
+            "message": "✅ Review saved successfully!",
             "redirect_url": "/home",
             "seconds": 5,
         },

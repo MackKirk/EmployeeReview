@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Sucesso</title>
+  <title>Success</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <script>
     function startCountdown(seconds, url) {
@@ -22,7 +22,7 @@
 <body class="bg-gray-100 flex items-center justify-center h-screen" onload="startCountdown({{ seconds }}, '{{ redirect_url }}')">
   <div class="bg-white p-6 rounded shadow-md text-center space-y-4">
     <p class="text-xl font-semibold">{{ message }}</p>
-    <p>Redirecionando em <span id="counter"></span> segundos...</p>
+    <p>Redirecting in <span id="counter"></span> seconds...</p>
   </div>
 </body>
 </html>
