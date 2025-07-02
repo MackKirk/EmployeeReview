@@ -118,7 +118,7 @@ async def submit_supervisor_review(request: Request, employee_id: str):
 
     for q in questions:
         value = form.get(f"q{q['id']}")
-        comment = form.get(f"c{q['id']}")
+        comment = form.get(f"c{q['id']}") if q["type"] == "scale" else None
         if q["type"] == "scale":
             value = int(value) if value else None
         answers.append(
