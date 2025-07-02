@@ -1,47 +1,39 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Director Final Review</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-</head>
-<body class="bg-gray-100 p-6">
-  <div class="max-w-5xl mx-auto bg-white p-6 rounded shadow">
-    <h1 class="text-2xl font-bold mb-6">Final Review of {{ employee.name }}</h1>
+{% extends 'base.html' %}
+{% block title %}Director Final Review{% endblock %}
 
-    <form method="post" action="/director/review/{{ employee.id }}/submit" class="space-y-6">
-      {% for q in questions %}
-        {% set idx = loop.index0 %}
-        <div>
-          <p class="font-semibold mb-1">{{ q.question }}</p>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-2">
-            <div>
-              <strong>Self:</strong>
-              {% set ans = review.employee_answers[idx] %}
-              {% if ans.type == 'scale' %}
-                {{ ans.value }}
-              {% else %}
-                {{ ans.value }}
-              {% endif %}
-            </div>
-            <div>
-              <strong>Supervisor:</strong>
-              {% set ans = review.supervisor_answers[idx] %}
-              {% if ans.type == 'scale' %}
-                {{ ans.value }}
-              {% else %}
-                {{ ans.value }}
-              {% endif %}
-              {% if ans.comment %}<br /><em>Comment: {{ ans.comment }}</em>{% endif %}
-            </div>
+{% block content %}
+<div class="max-w-5xl mx-auto bg-white p-8 rounded-xl shadow space-y-6">
+  <h1 class="text-3xl font-bold text-gray-800">Final Review of {{ employee.name }}</h1>
+
+  <form method="post" action="/director/review/{{ employee.id }}/submit" class="space-y-6">
+    {% for q in questions %}
+      {% set idx = loop.index0 %}
+      <div>
+        <p class="font-semibold text-gray-700 mb-1">{{ q.question }}</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 mb-2">
+          <div>
+            <span class="font-semibold">Self:</span>
+            {% set ans = review.employee_answers[idx] %}
+            {{ ans.value }}
           </div>
-          <textarea name="c{{ q.id }}" rows="3" class="w-full border p-2 rounded" placeholder="Director comment">{{ comment_map.get(q.question, '') }}</textarea>
+          <div>
+            <span class="font-semibold">Supervisor:</span>
+            {% set ans = review.supervisor_answers[idx] %}
+            {{ ans.value }}
+            {% if ans.comment %}
+              <br><em class="text-gray-500">Comment: {{ ans.comment }}</em>
+            {% endif %}
+          </div>
         </div>
-      {% endfor %}
+        <textarea name="c{{ q.id }}" rows="3" class="w-full border border-gray-300 p-2 rounded" placeholder="Director comment">{{ comment_map.get(q.question, '') }}</textarea>
+      </div>
+    {% endfor %}
 
-      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-        Save Comments
+    <div class="text-right">
+      <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition">
+        💾 Save Comments
       </button>
-    </form>
-  </div>
-</body>
-</html>
+    </div>
+  </form>
+</div>
+{% endblock %}
