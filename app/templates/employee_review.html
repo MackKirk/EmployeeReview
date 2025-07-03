@@ -7,11 +7,11 @@
 
   <form method="post" action="/employee/{{ employee.id }}/submit" class="space-y-6">
 
-{% set current_category = None %}
+{% set ns = namespace(current_category=None) %}
 {% for q in questions %}
-  {% if q.category != current_category %}
+  {% if q.category != ns.current_category %}
     <h2 class="text-xl font-bold text-gray-800 mt-10 border-b pb-1">{{ q.category }}</h2>
-    {% set current_category = q.category %}
+    {% set ns.current_category = q.category %}
   {% endif %}
 
     <div>
