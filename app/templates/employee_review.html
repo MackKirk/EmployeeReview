@@ -6,7 +6,14 @@
   <h1 class="text-3xl font-bold text-gray-800">Hello, {{ employee.name }}!</h1>
 
   <form method="post" action="/employee/{{ employee.id }}/submit" class="space-y-6">
-    {% for q in questions %}
+
+{% set current_category = None %}
+{% for q in questions %}
+  {% if q.category != current_category %}
+    <h2 class="text-xl font-bold text-gray-800 mt-10 border-b pb-1">{{ q.category }}</h2>
+    {% set current_category = q.category %}
+  {% endif %}
+
     <div>
       <label class="block font-semibold text-gray-700 mb-1">{{ q.question }}</label>
 
