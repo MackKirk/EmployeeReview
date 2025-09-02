@@ -2,8 +2,13 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = os.getenv("DATABASE_URL") or "postgresql://employee_review_db_user:Fu6A89inRV3dVJdFhF3ZdXYkmcBNr3Rl@dpg-d1fdsf7gi27c73cng7ug-a.oregon-postgres.render.com/employee_review_db"
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL environment variable not set")
 
+connect_args = {}
+if DATABASE_URL.startswith("postgres"):
+    connect_args = {"sslmode": "require"}
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

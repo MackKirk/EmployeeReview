@@ -5,4 +5,4 @@ python-multipart
 sqlalchemy
 uvicorn[standard]
 itsdangerous>=2.0
-psycopg2
+psycopg2-binary

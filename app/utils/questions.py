@@ -1,116 +1,33 @@
 questions = [
-  {
-    "id": 1,
-    "question": "On-time and quality delivery",
-    "type": "scale",
-    "category": "Performance"
-  },
-  {
-    "id": 2,
-    "question": "Organization and planning",
-    "type": "scale",
-    "category": "Performance"
-  },
-  {
-    "id": 3,
-    "question": "Technical knowledge of the role",
-    "type": "scale",
-    "category": "Performance"
-  },
-  {
-    "id": 4,
-    "question": "Problem-solving and decision-making",
-    "type": "scale",
-    "category": "Performance"
-  },
-  {
-    "id": 5,
-    "question": "Communication with the team",
-    "type": "scale",
-    "category": "Behavior & Teamwork"
-  },
-  {
-    "id": 6,
-    "question": "Collaboration and teamwork",
-    "type": "scale",
-    "category": "Behavior & Teamwork"
-  },
-  {
-    "id": 7,
-    "question": "Respect and professional attitude",
-    "type": "scale",
-    "category": "Behavior & Teamwork"
-  },
-  {
-    "id": 8,
-    "question": "Proactivity and initiative",
-    "type": "scale",
-    "category": "Behavior & Teamwork"
-  },
-  {
-    "id": 9,
-    "question": "Adaptability to change and learning",
-    "type": "scale",
-    "category": "Growth & Development"
-  },
-  {
-    "id": 10,
-    "question": "Responsibility and autonomy",
-    "type": "scale",
-    "category": "Growth & Development"
-  },
-  {
-    "id": 11,
-    "question": "Follows safety guidelines and procedures",
-    "type": "scale",
-    "category": "Safety & Responsibility"
-  },
-  {
-    "id": 12,
-    "question": "Punctuality",
-    "type": "scale",
-    "category": "Safety & Responsibility"
-  },
-  {
-    "id": 13,
-    "question": "Attendance",
-    "type": "scale",
-    "category": "Safety & Responsibility"
-  },
-  {
-    "id": 14,
-    "question": "What do you consider your biggest contribution this cycle?",
-    "type": "text",
-    "category": "Reflection & Planning"
-  },
-  {
-    "id": 15,
-    "question": "What challenges did you face and how did you handle them?",
-    "type": "text",
-    "category": "Reflection & Planning"
-  },
-  {
-    "id": 16,
-    "question": "What skills or behaviors would you like to improve?",
-    "type": "text",
-    "category": "Reflection & Planning"
-  },
-  {
-    "id": 17,
-    "question": "What are your professional or personal development goals?",
-    "type": "text",
-    "category": "Reflection & Planning"
-  },
-  {
-    "id": 18,
-    "question": "Do you feel supported by your supervisor and the company? What could be improved?",
-    "type": "text",
-    "category": "Reflection & Planning"
-  },
-  {
-    "id": 19,
-    "question": "Any additional comments or suggestions?",
-    "type": "text",
-    "category": "Reflection & Planning"
-  }
+  {"id": 1,  "question": "On-time and quality delivery", "type": "scale", "category": "Performance"},
+  {"id": 2,  "question": "Organization and planning", "type": "scale", "category": "Performance"},
+  {"id": 3,  "question": "Technical knowledge of the role", "type": "scale", "category": "Performance"},
+  {"id": 4,  "question": "Communication with the team", "type": "scale", "category": "Behavior & Teamwork"},
+  {"id": 5,  "question": "Collaboration and teamwork", "type": "scale", "category": "Behavior & Teamwork"},
+  {"id": 6,  "question": "Respect and professional attitude", "type": "scale", "category": "Behavior & Teamwork"},
+  {"id": 7,  "question": "Proactivity and initiative", "type": "scale", "category": "Behavior & Teamwork"},
+  {"id": 8,  "question": "Adaptability to change and learning", "type": "scale", "category": "Growth & Development"},
+  {"id": 9,  "question": "English Language", "type": "scale", "category": "Growth & Development"},
+  {"id": 10, "question": "Attitude", "type": "scale", "category": "Growth & Development"},
+  {"id": 11, "question": "Responsibility and autonomy", "type": "scale", "category": "Growth & Development"},
+  {"id": 12, "question": "Problem Solving and Decision making", "type": "scale", "category": "Skills Compentancy"},
+  {"id": 13, "question": "Form Fill Capability", "type": "scale", "category": "Skills Compentancy"},
+  {"id": 14, "question": "Tool Knowledge", "type": "scale", "category": "Skills Compentancy"},
+  {"id": 15, "question": "Material Knowledge", "type": "scale", "category": "Skills Compentancy"},
+  {"id": 16, "question": "Follows safety guidelines and procedures", "type": "scale", "category": "Safety"},
+  {"id": 17, "question": "Driving company Vehicle", "type": "scale", "category": "Safety"},
+  {"id": 18, "question": "Following drug and Alch Policy onsite", "type": "scale", "category": "Safety"},
+  {"id": 19, "question": "Following Safety Procedure", "type": "scale", "category": "Safety"},
+  {"id": 20, "question": "Have you recieved any Safey Discipline / Violation notices", "type": "yesno", "category": "Safety"},
+  {"id": 21, "question": "Use and Care of company tools", "type": "scale", "category": "Responsibility"},
+  {"id": 22, "question": "Punctuality", "type": "scale", "category": "Responsibility"},
+  {"id": 23, "question": "Attendance", "type": "scale", "category": "Responsibility"},
+  {"id": 24, "question": "Entering Hours on time / Correctly", "type": "scale", "category": "Responsibility"},
+  {"id": 25, "question": "Phone Distraction", "type": "scale", "category": "Responsibility"},
+  {"id": 26, "question": "What do you consider your biggest contribution this cycle?", "type": "text", "category": "Reflection & Planning"},
+  {"id": 27, "question": "What challenges did you face and how did you handle them?", "type": "text", "category": "Reflection & Planning"},
+  {"id": 28, "question": "What skills or behaviors would you like to improve?", "type": "text", "category": "Reflection & Planning"},
+  {"id": 29, "question": "What are your professional or personal development goals?", "type": "text", "category": "Reflection & Planning"},
+  {"id": 30, "question": "Do you feel supported by your supervisor and the company? What could be improved?", "type": "text", "category": "Reflection & Planning"},
+  {"id": 31, "question": "Any additional comments or suggestions?", "type": "text", "category": "Reflection & Planning"}
 ]

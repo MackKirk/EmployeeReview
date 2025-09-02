@@ -61,6 +61,8 @@ async def submit_employee_review(request: Request, employee_id: str):
         value = form.get(f"q{q['id']}")
         if q["type"] == "scale":
             value = int(value) if value else None
+        elif q["type"] == "yesno":
+            value = value if value in ("Yes", "No") else None
         answers.append({
             "question": q["question"],
             "type": q["type"],

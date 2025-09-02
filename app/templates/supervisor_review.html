@@ -30,7 +30,23 @@
       </div>
       {% endif %}
 
-      {% if q.type == "text" %}
+      {% if q.type == "yesno" %}
+      <div class="flex space-x-6 text-sm text-gray-600">
+        <label class="inline-flex items-center">
+          <input type="radio" name="q{{ q.id }}" value="Yes" class="mr-2"
+                 {% if existing_map.get(q.question) == 'Yes' %}checked{% endif %}
+                 {% if readonly %}disabled{% endif %}>
+          Yes
+        </label>
+        <label class="inline-flex items-center">
+          <input type="radio" name="q{{ q.id }}" value="No" class="mr-2"
+                 {% if existing_map.get(q.question) == 'No' %}checked{% endif %}
+                 {% if readonly %}disabled{% endif %}>
+          No
+        </label>
+      </div>
+
+      {% elif q.type == "text" %}
       <textarea name="q{{ q.id }}" rows="4"
                 class="w-full border border-gray-300 p-2 rounded resize-none"
                 {% if readonly %}disabled{% else %}required{% endif %}>{{ existing_map.get(q.question, '') }}</textarea>
