@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.db import SessionLocal
 from app.models import Employee, Review
 from app.utils.auth_utils import get_current_user
+from app.utils.seed import seed_employees_from_csv
+import os
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -50,3 +52,56 @@ async def home(request: Request):
         "supervisor_pending": supervisor_pending,
         "director_pending": director_pending,
     })
+
+
+@router.post("/admin/seed")
+async def admin_seed(request: Request):
+    user = get_current_user(request)
+    if not user or user.role != "director":
+        return HTMLResponse("Access denied", status_code=403)
+    db: Session = SessionLocal()
+    try:
+        result = seed_employees_from_csv(db)
+        if not result.get("ok"):
+            return HTMLResponse(f"Seed failed: {result.get('error')}", status_code=500)
+        return HTMLResponse(
+            f"Seeded from {result['path']}. Rows: {result['rows']}, created: {result['created']}, supervisor links: {result['updated']}",
+            status_code=200,
+        )
+    finally:
+        db.close()
+
+
+@router.get("/setup/seed", response_class=HTMLResponse)
+async def seed_setup_form(request: Request):
+    return templates.TemplateResponse("seed_setup.html", {"request": request})
+
+
+@router.post("/setup/seed", response_class=HTMLResponse)
+async def seed_setup_submit(request: Request, password: str = Form("")):
+    expected = os.getenv("SEED_PASSWORD", "seedme")
+    if password != expected:
+        return templates.TemplateResponse(
+            "seed_setup.html",
+            {"request": request, "error": "Invalid password."},
+            status_code=401,
+        )
+    db: Session = SessionLocal()
+    try:
+        result = seed_employees_from_csv(db)
+        if not result.get("ok"):
+            return templates.TemplateResponse(
+                "seed_setup.html",
+                {"request": request, "error": f"Seed failed: {result.get('error')}"},
+                status_code=500,
+            )
+        return templates.TemplateResponse(
+            "seed_setup.html",
+            {
+                "request": request,
+                "success": f"Seeded from {result['path']}. Rows: {result['rows']}, created: {result['created']}, supervisor links: {result['updated']}"
+            },
+            status_code=200,
+        )
+    finally:
+        db.close()

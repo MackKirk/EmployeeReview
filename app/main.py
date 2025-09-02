@@ -42,12 +42,16 @@ def create_tables_on_startup():
                 with open(csv_path, newline="", encoding="utf-8") as f:
                     reader = list(csv.DictReader(f))
 
-                # Normalize rows
+                # Normalize rows (strip BOM on first header if present)
                 norm_rows = []
                 for raw in reader:
-                    row = { (k or "").strip().lower(): (v or "").strip() for k, v in raw.items() }
+                    row = {}
+                    for k, v in raw.items():
+                        key = (k or "").strip().lower().lstrip("\ufeff")
+                        row[key] = (v or "").strip()
                     if row.get("name"):
                         norm_rows.append(row)
+                print(f"[startup] CSV rows detected: {len(norm_rows)}")
 
                 # Build set of supervisor names from SupervisorName column if present
                 supervisor_names = set()
@@ -110,6 +114,8 @@ def create_tables_on_startup():
 
                 if created:
                     db.commit()
+                else:
+                    print("[startup] No employees created (possibly already seeded).")
                 print(f"[startup] Employees created in first pass: {created}")
 
                 # Second pass: set supervisor_email by matching SupervisorName to generated emails
@@ -129,6 +135,8 @@ def create_tables_on_startup():
 
                 if updated:
                     db.commit()
+                else:
+                    print("[startup] No supervisor links updated.")
                 print(f"[startup] Employees updated with supervisors in second pass: {updated}")
             else:
                 print("[startup] No CSV found at app/data/Employees.csv or app/data/general_bamboohr_org_chart.csv. Skipping seed.")
