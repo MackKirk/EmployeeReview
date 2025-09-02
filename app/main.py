@@ -38,6 +38,7 @@ def create_tables_on_startup():
             ]
             csv_path = next((p for p in csv_paths if os.path.exists(p)), None)
             if csv_path:
+                print(f"[startup] Seeding employees from: {csv_path}")
                 with open(csv_path, newline="", encoding="utf-8") as f:
                     reader = list(csv.DictReader(f))
 
@@ -109,6 +110,7 @@ def create_tables_on_startup():
 
                 if created:
                     db.commit()
+                print(f"[startup] Employees created in first pass: {created}")
 
                 # Second pass: set supervisor_email by matching SupervisorName to generated emails
                 updated = 0
@@ -127,5 +129,8 @@ def create_tables_on_startup():
 
                 if updated:
                     db.commit()
+                print(f"[startup] Employees updated with supervisors in second pass: {updated}")
+            else:
+                print("[startup] No CSV found at app/data/Employees.csv or app/data/general_bamboohr_org_chart.csv. Skipping seed.")
     finally:
         db.close()
