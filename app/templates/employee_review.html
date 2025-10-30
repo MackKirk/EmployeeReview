@@ -11,10 +11,16 @@
 {% for q in questions %}
   {% if q.category != ns.current_category %}
     <h2 class="text-xl font-bold text-gray-800 mt-10 border-b pb-1">{{ q.category }}</h2>
+    {% if q.category_description %}
+    <p class="text-sm text-gray-600 mt-1">{{ q.category_description }}</p>
+    {% endif %}
     {% set ns.current_category = q.category %}
   {% endif %}
 
-    <div>
+    <div class="question-block" 
+         {% if q.controls_group %}data-controls-group="{{ q.controls_group }}"{% endif %}
+         {% if q.depends_on_group %}data-depends-on-group="{{ q.depends_on_group }}"{% endif %}
+         {% if q.depends_on_value %}data-depends-on-value="{{ q.depends_on_value }}"{% endif %}>
       <label class="block font-semibold text-gray-700 mb-1">{{ q.question }}</label>
 
       {% if q.type == "scale" %}
@@ -62,5 +68,55 @@
     </div>
     {% endif %}
   </form>
+
+  {% if not readonly %}
+  <script>
+    (function() {
+      function updateDependentBlocks(groupName, value) {
+        document.querySelectorAll('[data-depends-on-group="' + groupName + '"]').forEach(function(block) {
+          var expected = block.getAttribute('data-depends-on-value') || '';
+          var show = (value === expected);
+          block.style.display = show ? '' : 'none';
+          // Toggle required/disabled on inputs inside the block
+          block.querySelectorAll('input, textarea, select').forEach(function(input) {
+            if (!show) {
+              input.setAttribute('data-was-required', input.required ? '1' : '');
+              input.required = false;
+              input.disabled = true;
+            } else {
+              input.disabled = false;
+              if (input.getAttribute('data-was-required') === '1') {
+                input.required = true;
+              }
+            }
+          });
+        });
+      }
+
+      function initControls() {
+        // Initialize all groups based on current selections
+        var controlBlocks = document.querySelectorAll('[data-controls-group]');
+        controlBlocks.forEach(function(block) {
+          var groupName = block.getAttribute('data-controls-group');
+          var radios = block.querySelectorAll('input[type="radio"]');
+          var current = '';
+          radios.forEach(function(r) { if (r.checked) current = r.value; });
+          updateDependentBlocks(groupName, current);
+          radios.forEach(function(radio) {
+            radio.addEventListener('change', function(e) {
+              updateDependentBlocks(groupName, e.target.value);
+            });
+          });
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initControls);
+      } else {
+        initControls();
+      }
+    })();
+  </script>
+  {% endif %}
 </div>
 {% endblock %}
