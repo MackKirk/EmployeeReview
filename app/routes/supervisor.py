@@ -22,7 +22,7 @@ async def supervisor_dashboard(request: Request, supervisor_id: str):
         not current_user
         or str(current_user.id) != supervisor_id
         or not (
-            current_user.role in ("supervisor", "manager")
+            current_user.role == "supervisor"
             or current_user.is_supervisor
             or (current_user.role == "director" and current_user.is_supervisor)
         )
@@ -34,7 +34,7 @@ async def supervisor_dashboard(request: Request, supervisor_id: str):
     # which caused false negatives when a supervisor attempted to access their
     # dashboard.
     if not supervisor or not (
-        supervisor.role in ("supervisor", "manager") or supervisor.is_supervisor
+        supervisor.role == "supervisor" or supervisor.is_supervisor
     ):
         db.close()
         return HTMLResponse(
@@ -72,7 +72,7 @@ async def supervisor_review(request: Request, employee_id: str):
         not current_user
         or current_user.email != employee.supervisor_email
         or not (
-            current_user.role in ("supervisor", "manager")
+            current_user.role == "supervisor"
             or current_user.is_supervisor
             or (current_user.role == "director" and current_user.is_supervisor)
         )

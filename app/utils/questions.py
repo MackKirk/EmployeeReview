@@ -65,8 +65,8 @@ employee_questions = [
   {"id": 49, "question": "Any additional comments or suggestions?", "type": "text", "category": "REFLECTION & PLANNING"}
 ]
 
-# Manager self-review questions (example set; adjust as needed)
-manager_questions = [
+# Administration self-review questions (example set; adjust as needed)
+administration_questions = [
   {"id": 101, "question": "Team goal setting and alignment", "type": "scale", "category": "Leadership"},
   {"id": 102, "question": "Coaching and feedback quality", "type": "scale", "category": "Leadership"},
   {"id": 103, "question": "Delegation and empowerment", "type": "scale", "category": "Leadership"},
@@ -96,8 +96,11 @@ supervisor_questions = [
 
 def get_questions_for_role(role: str):
   r = (role or "").lower().strip()
+  if r in ("administration", "admin"):
+    return administration_questions
+  # Backward-compat: treat legacy 'manager' as 'administration'
   if r == "manager":
-    return manager_questions
+    return administration_questions
   if r == "supervisor":
     return supervisor_questions
   return employee_questions

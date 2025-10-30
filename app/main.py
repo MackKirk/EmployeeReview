@@ -100,6 +100,8 @@ def create_tables_on_startup():
                     # Determine role
                     role = r.get("role") or ""
                     role = role.lower().strip()
+                    if role == "manager":
+                        role = "administration"
                     if not role:
                         if 'director' in (job_title.lower() + ' ' + dept.lower()):
                             role = 'director'

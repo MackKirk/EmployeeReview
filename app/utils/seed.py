@@ -72,8 +72,10 @@ def seed_employees_from_csv(db):
         email = r.get("email") or make_email_from_name(name)
         job_title = r.get("job title") or r.get("job_title") or ""
         dept = r.get("department") or ""
-        # Last column (Role) indicates which form they respond to: employee/manager/supervisor/director
+        # Last column (Role) indicates which form they respond to: employee/supervisor/administration/director
         role = (r.get("role") or "").lower().strip()
+        if role == "manager":
+            role = "administration"
         if not role:
             if 'director' in (job_title.lower() + ' ' + dept.lower()):
                 role = 'director'
