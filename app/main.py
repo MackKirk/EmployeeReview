@@ -7,7 +7,7 @@ from app.routes import auth, employee, supervisor, director, home
 from app.db import engine, SessionLocal
 from app.models import Base, Employee
 import csv
-from datetime import date
+from datetime import date, datetime
 
 app = FastAPI()
 SESSION_SECRET = os.getenv("SESSION_SECRET", "changeme")
@@ -67,6 +67,21 @@ def create_tables_on_startup():
                         base = base.replace('..', '.')
                     return f"{base}@example.com"
 
+                def parse_birthdate(value: str) -> date:
+                    v = (value or "").strip()
+                    if not v:
+                        return date(2000, 1, 1)
+                    try:
+                        return date.fromisoformat(v)
+                    except Exception:
+                        pass
+                    for fmt in ("%m/%d/%Y", "%d/%m/%Y"):
+                        try:
+                            return datetime.strptime(v, fmt).date()
+                        except Exception:
+                            continue
+                    return date(2000, 1, 1)
+
                 # First pass: create all employees with generated emails and roles
                 name_to_email = {}
                 created = 0
@@ -94,10 +109,7 @@ def create_tables_on_startup():
                             role = 'employee'
 
                     birth_date_str = r.get("birth_date") or r.get("birthdate")
-                    try:
-                        bd = date.fromisoformat(birth_date_str) if birth_date_str else date(2000, 1, 1)
-                    except Exception:
-                        bd = date(2000, 1, 1)
+                    bd = parse_birthdate(birth_date_str)
 
                     password = "directorpass" if role == "director" else None
 
@@ -132,6 +144,12 @@ def create_tables_on_startup():
                     if sup_email and emp.supervisor_email != sup_email:
                         emp.supervisor_email = sup_email
                         updated += 1
+                    # Also mark supervisors (including managers listed as supervisors) as is_supervisor
+                    if sup_name:
+                        sup_emp = db.query(Employee).filter(Employee.name == sup_name).first()
+                        if sup_emp and not sup_emp.is_supervisor:
+                            sup_emp.is_supervisor = True
+                            updated += 1
 
                 if updated:
                     db.commit()

@@ -1,6 +1,6 @@
 import os
 import csv
-from datetime import date
+from datetime import date, datetime
 from app.models import Employee
 
 
@@ -9,6 +9,24 @@ def make_email_from_name(name: str) -> str:
     while '..' in base:
         base = base.replace('..', '.')
     return f"{base}@example.com"
+
+
+def _parse_birthdate(value: str) -> date:
+    v = (value or "").strip()
+    if not v:
+        return date(2000, 1, 1)
+    # Try ISO first (yyyy-mm-dd)
+    try:
+        return date.fromisoformat(v)
+    except Exception:
+        pass
+    # Try mm/dd/yyyy
+    for fmt in ("%m/%d/%Y", "%d/%m/%Y"):
+        try:
+            return datetime.strptime(v, fmt).date()
+        except Exception:
+            continue
+    return date(2000, 1, 1)
 
 
 def seed_employees_from_csv(db):
@@ -35,6 +53,7 @@ def seed_employees_from_csv(db):
 
     supervisor_names = set()
     for r in norm_rows:
+        # 4th column is supervisor name (by the CSV header it is SupervisorName)
         sup_name = r.get("supervisorname") or r.get("supervisor") or r.get("manager")
         if sup_name:
             supervisor_names.add(sup_name.strip())
@@ -53,6 +72,7 @@ def seed_employees_from_csv(db):
         email = r.get("email") or make_email_from_name(name)
         job_title = r.get("job title") or r.get("job_title") or ""
         dept = r.get("department") or ""
+        # Last column (Role) indicates which form they respond to: employee/manager/supervisor/director
         role = (r.get("role") or "").lower().strip()
         if not role:
             if 'director' in (job_title.lower() + ' ' + dept.lower()):
@@ -63,10 +83,7 @@ def seed_employees_from_csv(db):
                 role = 'employee'
 
         birth_date_str = r.get("birth_date") or r.get("birthdate")
-        try:
-            bd = date.fromisoformat(birth_date_str) if birth_date_str else date(2000, 1, 1)
-        except Exception:
-            bd = date(2000, 1, 1)
+        bd = _parse_birthdate(birth_date_str)
 
         password = "directorpass" if role == "director" else None
 
@@ -97,6 +114,12 @@ def seed_employees_from_csv(db):
         if sup_email and emp.supervisor_email != sup_email:
             emp.supervisor_email = sup_email
             updated += 1
+        # Ensure supervisors (including managers) are flagged
+        if sup_name:
+            sup_emp = db.query(Employee).filter(Employee.name == sup_name).first()
+            if sup_emp and not sup_emp.is_supervisor:
+                sup_emp.is_supervisor = True
+                updated += 1
 
     if updated:
         db.commit()
