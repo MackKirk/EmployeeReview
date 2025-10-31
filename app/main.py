@@ -142,9 +142,9 @@ def create_tables_on_startup():
                     emp = db.query(Employee).filter(Employee.name == name).first()
                     if not emp:
                         continue
-                    sup_email = name_to_email.get(sup_name) if sup_name else None
-                    if sup_email and emp.supervisor_email != sup_email:
-                        emp.supervisor_email = sup_email
+                    # Store supervisor NAME (not email) to align with business rules
+                    if sup_name and emp.supervisor_email != sup_name:
+                        emp.supervisor_email = sup_name
                         updated += 1
                     # Also mark supervisors (including managers listed as supervisors) as is_supervisor
                     if sup_name:

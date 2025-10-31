@@ -41,7 +41,7 @@ async def supervisor_dashboard(request: Request, supervisor_id: str):
             "Supervisor not found or access denied", status_code=403
         )
 
-    subordinates = db.query(Employee).filter_by(supervisor_email=supervisor.email).all()
+    subordinates = db.query(Employee).filter_by(supervisor_email=supervisor.name).all()
     data = []
     for emp in subordinates:
         r = db.query(Review).filter_by(employee_id=emp.id).first()
@@ -70,7 +70,7 @@ async def supervisor_review(request: Request, employee_id: str):
         return HTMLResponse("Employee not found", status_code=404)
     if (
         not current_user
-        or current_user.email != employee.supervisor_email
+        or current_user.name != employee.supervisor_email
         or not (
             current_user.role == "supervisor"
             or current_user.is_supervisor

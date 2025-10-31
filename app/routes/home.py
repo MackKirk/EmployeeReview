@@ -27,7 +27,7 @@ async def home(request: Request):
     # Pending reviews for supervisor
     supervisor_pending = 0
     if user.role == "supervisor" or user.is_supervisor:
-        subordinates = db.query(Employee).filter_by(supervisor_email=user.email).all()
+        subordinates = db.query(Employee).filter_by(supervisor_email=user.name).all()
         for emp in subordinates:
             r = db.query(Review).filter_by(employee_id=emp.id).first()
             if not r or not r.supervisor_answers:

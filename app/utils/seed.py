@@ -112,9 +112,10 @@ def seed_employees_from_csv(db):
         emp = db.query(Employee).filter(Employee.name == name).first()
         if not emp:
             continue
-        sup_email = name_to_email.get(sup_name) if sup_name else None
-        if sup_email and emp.supervisor_email != sup_email:
-            emp.supervisor_email = sup_email
+        # Store supervisor NAME (not email) in supervisor_email column to match business need
+        # Note: We keep the column name for compatibility, but value is supervisor's name
+        if sup_name and emp.supervisor_email != sup_name:
+            emp.supervisor_email = sup_name
             updated += 1
         # Ensure supervisors (including managers) are flagged
         if sup_name:
