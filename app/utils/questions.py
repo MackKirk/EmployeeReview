@@ -137,7 +137,7 @@ supervisor_questions = [
   {"id": 41, "question": "What could the company do differently to help you better perform your job?", "type": "text", "category": "REFLECTION & PLANNING"},
   {"id": 42, "question": "What are the areas in which you most need to improve?", "type": "text", "category": "REFLECTION & PLANNING"},
   {"id": 43, "question": "What other comments or suggestions should be included in this review?", "type": "text", "category": "REFLECTION & PLANNING"},
-  {"id": 44, "question": "List some professional goals you have for the next review period", "type": "text", "category": "REFLECTION & PLANNING"}
+  {"id": 44, "question": "List some professional goals you have for the next review period", "type": "text", "category": "REFLECTION & PLANNING"},
 
    # COMPANY VEHICLE AND MACHINERY
   {"id": 45, "question": "Do you drive a company vehicle?", "type": "yesno", "category": "COMPANY VEHICLE AND MACHINERY", "category_description": "Does the employee follow company policy and the BC road laws", "controls_group": "vehicle"},
