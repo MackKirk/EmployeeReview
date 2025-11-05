@@ -11,6 +11,9 @@
 {% for q in questions %}
   {% if q.category != ns.current_category %}
     <h2 class="text-xl font-bold text-gray-800 mt-10 border-b pb-1">{{ q.category }}</h2>
+    {% if q.category_description %}
+    <p class="text-sm text-gray-600 mt-1">{{ q.category_description }}</p>
+    {% endif %}
     {% set ns.current_category = q.category %}
   {% endif %}
 

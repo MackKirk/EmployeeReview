@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 from app.db import SessionLocal
 from app.models import Employee, Review
 from app.utils.auth_utils import get_current_user
+from app.utils.auth_utils import generate_magic_login_token
+from app.utils.email import send_email
 from app.utils.seed import seed_employees_from_csv
 import os
 
@@ -103,5 +105,78 @@ async def seed_setup_submit(request: Request, password: str = Form("")):
             },
             status_code=200,
         )
+    finally:
+        db.close()
+
+
+@router.post("/admin/send-review-link/{employee_id}")
+async def admin_send_review_link(request: Request, employee_id: str):
+    user = get_current_user(request)
+    if not user or user.role != "director":
+        return HTMLResponse("Access denied", status_code=403)
+
+    base_url = os.getenv("APP_BASE_URL", "http://localhost:8000")
+    db: Session = SessionLocal()
+    try:
+        emp = db.query(Employee).filter_by(id=employee_id).first()
+        if not emp:
+            return HTMLResponse("Employee not found", status_code=404)
+        if not emp.email:
+            return HTMLResponse("Employee has no email", status_code=400)
+
+        token = generate_magic_login_token(str(emp.id), redirect_url=f"/employee/{emp.id}", role=emp.role)
+        link = f"{base_url}/magic-login?token={token}"
+        subject = "Your Employee Self-Review"
+        html = (
+            f"<p>Hello {emp.name},</p>"
+            f"<p>Please complete your self-review using the link below. This link logs you in automatically.</p>"
+            f"<p><a href=\"{link}\" style=\"background:#2563eb;color:#fff;padding:10px 16px;text-decoration:none;border-radius:6px\">Open your review</a></p>"
+            f"<p>If the button doesn’t work, copy and paste this URL:<br>{link}</p>"
+            f"<p>This link expires in {int(os.getenv('MAGIC_LINK_MAX_AGE_SECONDS','604800'))//86400} days.</p>"
+        )
+        ok = send_email(emp.email, subject, html)
+        if not ok:
+            return HTMLResponse("Failed to send email (SMTP not configured?)", status_code=500)
+        # Redirect back to admin page with a flash-like message via querystring
+        return RedirectResponse("/admin", status_code=302)
+    finally:
+        db.close()
+
+
+@router.post("/admin/send-review-links")
+async def admin_send_review_links(request: Request, role: str = Form(None)):
+    user = get_current_user(request)
+    if not user or user.role != "director":
+        return HTMLResponse("Access denied", status_code=403)
+
+    base_url = os.getenv("APP_BASE_URL", "http://localhost:8000")
+    db: Session = SessionLocal()
+    try:
+        q = db.query(Employee)
+        if role:
+            q = q.filter(Employee.role == role)
+        employees = q.all()
+        sent = 0
+        skipped = 0
+        for emp in employees:
+            if not emp.email:
+                skipped += 1
+                continue
+            token = generate_magic_login_token(str(emp.id), redirect_url=f"/employee/{emp.id}", role=emp.role)
+            link = f"{base_url}/magic-login?token={token}"
+            subject = "Your Employee Self-Review"
+            html = (
+                f"<p>Hello {emp.name},</p>"
+                f"<p>Please complete your self-review using the link below. This link logs you in automatically.</p>"
+                f"<p><a href=\"{link}\" style=\"background:#2563eb;color:#fff;padding:10px 16px;text-decoration:none;border-radius:6px\">Open your review</a></p>"
+                f"<p>If the button doesn’t work, copy and paste this URL:<br>{link}</p>"
+                f"<p>This link expires in {int(os.getenv('MAGIC_LINK_MAX_AGE_SECONDS','604800'))//86400} days.</p>"
+            )
+            ok = send_email(emp.email, subject, html)
+            if ok:
+                sent += 1
+            else:
+                skipped += 1
+        return HTMLResponse(f"Emails sent: {sent}. Skipped: {skipped}. Role filter: {role or 'all'}.", status_code=200)
     finally:
         db.close()

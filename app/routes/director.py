@@ -89,3 +89,34 @@ async def director_dashboard(request: Request):
         "request": request,
         "reviews": reviews
     })
+
+
+@router.get("/admin", response_class=HTMLResponse)
+async def admin_page(request: Request):
+    current_user = get_current_user(request)
+    if not current_user or current_user.role != "director":
+        return HTMLResponse("Access restricted", status_code=403)
+
+    db: Session = SessionLocal()
+    try:
+        from sqlalchemy.orm import joinedload
+        employees = db.query(Employee).all()
+        rows = []
+        for emp in employees:
+            r = db.query(Review).options(joinedload(Review.employee)).filter_by(employee_id=emp.id).first()
+            employee_done = bool(r and r.employee_answers)
+            supervisor_done = bool(r and r.supervisor_answers)
+            director_done = bool(r and r.director_comments)
+            rows.append({
+                "employee": emp,
+                "employee_done": employee_done,
+                "supervisor_done": supervisor_done,
+                "director_done": director_done,
+            })
+    finally:
+        db.close()
+
+    return templates.TemplateResponse("admin.html", {
+        "request": request,
+        "rows": rows,
+    })

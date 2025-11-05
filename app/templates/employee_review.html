@@ -4,6 +4,12 @@
 {% block content %}
 <div class="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow space-y-6">
   <h1 class="text-3xl font-bold text-gray-800">Hello, {{ employee.name }}!</h1>
+  {% if not readonly %}
+  <div>
+    <h2 class="text-xl font-semibold text-gray-800">Employee Self Review</h2>
+    <p class="text-sm text-gray-700 mt-1">Welcome, {{ employee.name }}. Please complete your self‑review in one sitting. If you leave before submitting, your answers will be lost.</p>
+  </div>
+  {% endif %}
 
   <form method="post" action="/employee/{{ employee.id }}/submit" class="space-y-6">
 

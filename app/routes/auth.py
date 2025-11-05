@@ -6,6 +6,8 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from app.db import SessionLocal
 from app.models import Employee  # ou Employee se for o modelo certo
+import os
+from app.utils.auth_utils import generate_magic_login_token, verify_magic_login_token
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -86,3 +88,26 @@ def get_usernames(role: str = None, exclude_directors: bool = False):
     names = query.all()
     db.close()
     return JSONResponse([name[0] for name in names])
+
+
+@router.get("/magic-login")
+async def magic_login(request: Request, token: str):
+    data = verify_magic_login_token(token)
+    if not data:
+        return HTMLResponse("Invalid or expired link.", status_code=401)
+
+    db: Session = SessionLocal()
+    try:
+        user = db.query(Employee).filter(Employee.id == data.get("user_id")).first()
+        if not user:
+            return HTMLResponse("User not found.", status_code=404)
+
+        # Create session
+        request.session["user_id"] = str(user.id)
+        request.session["role"] = user.role
+        request.session["name"] = user.name
+
+        redirect_url = data.get("redirect") or "/home"
+        return RedirectResponse(redirect_url, status_code=302)
+    finally:
+        db.close()
