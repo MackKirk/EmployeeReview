@@ -76,6 +76,23 @@
   </form>
 
   {% if not readonly %}
+  <!-- Instructions Modal -->
+  <div id="review-instructions-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white w-full max-w-xl p-6 rounded-xl shadow space-y-4">
+      <h2 class="text-2xl font-bold text-gray-800">Before you begin</h2>
+      <p class="text-gray-700">Please read these instructions carefully before starting your self‑review:</p>
+      <ul class="list-disc pl-6 text-gray-700 space-y-1">
+        <li>This review is about your performance and growth.</li>
+        <li>Complete it in one sitting. Unsaved answers will be lost if you leave the page.</li>
+        <li>Be honest and specific. Your input helps guide development and feedback.</li>
+        <li>Use the rating scale on the right as a reference for each score.</li>
+      </ul>
+      <div class="text-right">
+        <button id="accept-instructions" type="button" class="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700">I Understand and Agree</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     (function() {
       function updateDependentBlocks(groupName, value) {
@@ -121,8 +138,18 @@
       } else {
         initControls();
       }
+
+      // Modal accept handler
+      var overlay = document.getElementById('review-instructions-overlay');
+      var accept = document.getElementById('accept-instructions');
+      if (overlay && accept) {
+        accept.addEventListener('click', function() {
+          overlay.style.display = 'none';
+        });
+      }
     })();
   </script>
   {% endif %}
 </div>
+{% include '_rating_scale.html' %}
 {% endblock %}

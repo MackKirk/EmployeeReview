@@ -6,7 +6,7 @@ from app.db import SessionLocal
 from app.models import Employee, Review, EmailEvent
 from app.utils.auth_utils import get_current_user
 from app.utils.auth_utils import generate_magic_login_token
-from app.utils.email import send_email
+from app.utils.email import send_email, build_review_invite_email
 from app.utils.seed import seed_employees_from_csv
 import os
 
@@ -128,14 +128,8 @@ async def admin_send_review_link(request: Request, employee_id: str):
 
         token = generate_magic_login_token(str(emp.id), redirect_url=f"/employee/{emp.id}", role=emp.role)
         link = f"{base_url}/magic-login?token={token}"
-        subject = "Your Employee Self-Review"
-        html = (
-            f"<p>Hello {emp.name},</p>"
-            f"<p>Please complete your self-review using the link below. This link logs you in automatically.</p>"
-            f"<p><a href=\"{link}\" style=\"background:#2563eb;color:#fff;padding:10px 16px;text-decoration:none;border-radius:6px\">Open your review</a></p>"
-            f"<p>If the button doesn’t work, copy and paste this URL:<br>{link}</p>"
-            f"<p>This link expires in {int(os.getenv('MAGIC_LINK_MAX_AGE_SECONDS','604800'))//86400} days.</p>"
-        )
+        subject = "Employee Review Notice"
+        html = build_review_invite_email(emp.name, link, base_url)
         ok = send_email(emp.email, subject, html)
         if not ok:
             return HTMLResponse("Failed to send email (SMTP not configured?)", status_code=500)
@@ -172,14 +166,8 @@ async def admin_send_review_links(request: Request, role: str = Form(None)):
                 continue
             token = generate_magic_login_token(str(emp.id), redirect_url=f"/employee/{emp.id}", role=emp.role)
             link = f"{base_url}/magic-login?token={token}"
-            subject = "Your Employee Self-Review"
-            html = (
-                f"<p>Hello {emp.name},</p>"
-                f"<p>Please complete your self-review using the link below. This link logs you in automatically.</p>"
-                f"<p><a href=\"{link}\" style=\"background:#2563eb;color:#fff;padding:10px 16px;text-decoration:none;border-radius:6px\">Open your review</a></p>"
-                f"<p>If the button doesn’t work, copy and paste this URL:<br>{link}</p>"
-                f"<p>This link expires in {int(os.getenv('MAGIC_LINK_MAX_AGE_SECONDS','604800'))//86400} days.</p>"
-            )
+            subject = "Employee Review Notice"
+            html = build_review_invite_email(emp.name, link, base_url)
             ok = send_email(emp.email, subject, html)
             if ok:
                 sent += 1
