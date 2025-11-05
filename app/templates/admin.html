@@ -56,6 +56,7 @@
             <form method="post" action="/admin/send-review-link/{{ row.employee.id }}" class="inline">
               <button class="text-blue-600 font-semibold hover:underline">Send email</button>
             </form>
+            <a href="/director/review/{{ row.employee.id }}" class="ml-3 text-gray-700 hover:underline">View compare</a>
           </td>
         </tr>
         {% endfor %}

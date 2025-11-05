@@ -13,10 +13,11 @@ templates = Jinja2Templates(directory="app/templates")
 @router.get("/director/review/{employee_id}", response_class=HTMLResponse)
 async def director_view_review(request: Request, employee_id: str):
     current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
     db: Session = SessionLocal()
     employee = db.query(Employee).filter_by(id=employee_id).first()
     review = db.query(Review).filter_by(employee_id=employee_id).first()
-    if not current_user or current_user.role != "director":
+    if not ((current_user and current_user.role == "director") or is_admin):
         db.close()
         return HTMLResponse("Access restricted", status_code=403)
     if not employee or not review:
@@ -29,6 +30,7 @@ async def director_view_review(request: Request, employee_id: str):
     existing = review.director_comments or []
     comment_map = {c["question"]: c.get("comment") for c in existing}
 
+    allow_comments = bool(current_user and current_user.role == "director")
     return templates.TemplateResponse(
         "director_review.html",
         {
@@ -37,6 +39,7 @@ async def director_view_review(request: Request, employee_id: str):
             "review": review,
             "questions": questions,
             "comment_map": comment_map,
+            "allow_comments": allow_comments,
         },
     )
 

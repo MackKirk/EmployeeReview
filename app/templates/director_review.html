@@ -32,15 +32,23 @@
             {% endif %}
           </div>
         </div>
+        {% if allow_comments %}
         <textarea name="c{{ q.id }}" rows="3" class="w-full border border-gray-300 p-2 rounded" placeholder="Director comment">{{ comment_map.get(q.question, '') }}</textarea>
+        {% else %}
+        {% if comment_map.get(q.question) %}
+        <div class="text-sm text-gray-600"><span class="font-semibold">Director comment:</span> {{ comment_map.get(q.question) }}</div>
+        {% endif %}
+        {% endif %}
       </div>
     {% endfor %}
 
-    <div class="text-right">
-      <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition">
-        💾 Save Comments
-      </button>
-    </div>
+    {% if allow_comments %}
+      <div class="text-right">
+        <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition">
+          💾 Save Comments
+        </button>
+      </div>
+    {% endif %}
   </form>
 </div>
 {% endblock %}

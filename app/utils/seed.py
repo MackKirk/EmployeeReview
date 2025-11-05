@@ -60,16 +60,24 @@ def seed_employees_from_csv(db):
 
     name_to_email = {}
     created = 0
+    updated = 0
     for r in norm_rows:
         name = r.get("name")
         if not name:
             continue
         exists = db.query(Employee).filter(Employee.name == name).first()
         if exists:
-            name_to_email[name] = exists.email
+            # Update email if provided explicitly in CSV
+            csv_email = (r.get("email") or "").strip()
+            if csv_email and exists.email != csv_email:
+                exists.email = csv_email
+                updated += 1
+                name_to_email[name] = csv_email
+            else:
+                name_to_email[name] = exists.email
             continue
 
-        email = r.get("email") or make_email_from_name(name)
+        email = (r.get("email") or "").strip() or make_email_from_name(name)
         job_title = r.get("job title") or r.get("job_title") or ""
         dept = r.get("department") or ""
         # Last column (Role) indicates which form they respond to: employee/supervisor/administration/director
@@ -100,10 +108,10 @@ def seed_employees_from_csv(db):
         created += 1
         name_to_email[name] = email
 
-    if created:
+    if created or updated:
         db.commit()
 
-    updated = 0
+    # Second pass: link supervisors by NAME and flag supervisors
     for r in norm_rows:
         name = r.get("name")
         sup_name = r.get("supervisorname") or r.get("supervisor") or r.get("manager")
