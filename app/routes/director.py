@@ -94,7 +94,8 @@ async def director_dashboard(request: Request):
 @router.get("/admin", response_class=HTMLResponse)
 async def admin_page(request: Request):
     current_user = get_current_user(request)
-    if not current_user or current_user.role != "director":
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
 
     db: Session = SessionLocal()

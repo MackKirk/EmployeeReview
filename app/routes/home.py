@@ -59,7 +59,8 @@ async def home(request: Request):
 @router.post("/admin/seed")
 async def admin_seed(request: Request):
     user = get_current_user(request)
-    if not user or user.role != "director":
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((user and user.role == "director") or is_admin):
         return HTMLResponse("Access denied", status_code=403)
     db: Session = SessionLocal()
     try:
@@ -112,7 +113,8 @@ async def seed_setup_submit(request: Request, password: str = Form("")):
 @router.post("/admin/send-review-link/{employee_id}")
 async def admin_send_review_link(request: Request, employee_id: str):
     user = get_current_user(request)
-    if not user or user.role != "director":
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((user and user.role == "director") or is_admin):
         return HTMLResponse("Access denied", status_code=403)
 
     base_url = os.getenv("APP_BASE_URL", "http://localhost:8000")

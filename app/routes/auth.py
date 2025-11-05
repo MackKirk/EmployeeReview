@@ -111,3 +111,21 @@ async def magic_login(request: Request, token: str):
         return RedirectResponse(redirect_url, status_code=302)
     finally:
         db.close()
+
+
+@router.get("/admin-login", response_class=HTMLResponse)
+async def show_admin_login(request: Request):
+    return templates.TemplateResponse("admin_login.html", {"request": request})
+
+
+@router.post("/admin-login")
+async def admin_login(request: Request, password: str = Form("")):
+    expected = os.getenv("ADMIN_PASSWORD", "adminpass")
+    if password != expected:
+        return templates.TemplateResponse(
+            "admin_login.html",
+            {"request": request, "error": "Invalid password."},
+            status_code=401,
+        )
+    request.session["is_admin"] = True
+    return RedirectResponse("/admin", status_code=302)
