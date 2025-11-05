@@ -122,10 +122,65 @@ async def admin_page(request: Request):
                 "has_sent": has_sent,
                 "has_clicked": has_clicked,
             })
+        all_names = [e.name for e in employees]
     finally:
         db.close()
 
     return templates.TemplateResponse("admin.html", {
         "request": request,
         "rows": rows,
+        "names": all_names,
+        "allowed_roles": ["employee", "supervisor", "administration", "director"],
+        "message": request.query_params.get("message"),
+        "error": request.query_params.get("error"),
     })
+
+
+@router.post("/admin/update-employee/{employee_id}")
+async def admin_update_employee(request: Request, employee_id: str, role: str = Form(None), supervisor_name: str = Form(None)):
+    current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
+        return HTMLResponse("Access restricted", status_code=403)
+
+    allowed = {"employee", "supervisor", "administration", "director"}
+    role_val = (role or "").strip().lower()
+    if role_val and role_val not in allowed:
+        return HTMLResponse("Invalid role", status_code=400)
+
+    db: Session = SessionLocal()
+    try:
+        emp = db.query(Employee).filter_by(id=employee_id).first()
+        if not emp:
+            return HTMLResponse("Employee not found", status_code=404)
+
+        changed = False
+        if role_val and emp.role != role_val:
+            emp.role = role_val
+            # If set to supervisor, ensure is_supervisor; otherwise clear it
+            if role_val == "supervisor":
+                if not emp.is_supervisor:
+                    emp.is_supervisor = True
+            else:
+                if emp.is_supervisor:
+                    emp.is_supervisor = False
+            changed = True
+
+        sup_name_val = (supervisor_name or "").strip()
+        if emp.supervisor_email != sup_name_val:
+            # Allow clearing supervisor by selecting None
+            emp.supervisor_email = sup_name_val or None
+            if sup_name_val:
+                # Ensure the named supervisor is flagged as supervisor
+                sup_emp = db.query(Employee).filter(Employee.name == sup_name_val).first()
+                if sup_emp and not sup_emp.is_supervisor:
+                    sup_emp.is_supervisor = True
+            changed = True
+
+        if changed:
+            db.commit()
+
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse("/admin?message=Employee%20updated", status_code=302)
+    finally:
+        db.close()

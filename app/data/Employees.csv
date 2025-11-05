@@ -1,184 +1,193 @@
-Name,Department,Job Title,SupervisorName,Birthdate,Role
-Alan Cartridge,Field,Carpenter,Christina Laplante,10/28/1985,employee
-Angelina Higden,Admin,Controller,Christina Laplante,8/19/1966,employee
-Bianca Laplante,Admin,"Business Administration, HR",Christina Laplante,2/27/1997,employee
-Blair Bennett,Management,Business Development Manager,Christina Laplante,5/28/1971,employee
-Breanne Topham,Admin,Administrator,Christina Laplante,1/10/1992,employee
-Brijesh Patel,Operations,Janitor / Groundskeeper,Christina Laplante,9/18/1984,employee
-Chris Harding,Field,Yard Coordinator,Christina Laplante,10/28/1971,employee
-Christina Laplante,Management,Director,Christina Laplante,8/11/1972,manager
-Christopher Burdekin,Management,Project Manager,Christina Laplante,5/24/1985,employee
-Christopher Davy,Management,Sheet Metal Shop Manager,Christina Laplante,2/24/1971,employee
-Christopher Finnson,Management,CW Logistics Coordinator,Christina Laplante,10/9/1987,employee
-Christopher Lindeman,Management,Estimator / Project Manager,Christina Laplante,4/10/1978,employee
-Daniel Antoni,Project Management,Superintendent,Christina Laplante,5/5/1976,supervisor
-David Falkins,Field,Bin Driver,Christina Laplante,5/2/1958,employee
-Derrick Bequette,Field,Crane Operator,Christina Laplante,6/26/1981,employee
-Fraser Cartridge,Field,Landscaper,Christina Laplante,4/8/1988,employee
-Gabriela Rytir,Admin,Admin Coordinator,Christina Laplante,3/1/1979,employee
-George Brown,Field,Yard Manager,Christina Laplante,9/26/1968,employee
-Gino Laplante,Management,Director,Christina Laplante,2/27/1972,employee
-Harley Laplante,Project Management,"Roofer, Red Seal",Christina Laplante,5/7/1998,employee
-Hung Huynh,Operations,Electrician,Christina Laplante,5/17/1964,employee
-James Palylyk,IT,IT Manager,Christina Laplante,7/23/1978,employee
-James Spillard,Management,Roofing Maintenance & Quality Control Coordinator,Christina Laplante,9/1/1986,employee
-Jesse Hembrough,Project Management,Superintendent,Christina Laplante,7/15/1977,employee
-John Walsh,Management,Estimator / Project Manager,Christina Laplante,6/27/1976,employee
-Jon Arnold,Operations,Construction and Projects Facilitator,Christina Laplante,,employee
-Karen Jones,Admin,Controller,Christina Laplante,,employee
-Krystle Gaudreau,Management,Administrative Assistant,Christina Laplante,4/13/1993,employee
-Kyle Watson,Management,Estimator / Project Manager,Christina Laplante,4/25/1989,employee
-Lee Ouderkirk,Project Management,Superintendent,Christina Laplante,1/14/1960,employee
-Martin Oldford,Management,Estimator / Project Manager,Christina Laplante,7/21/1970,employee
-Matt Stoddart,Management,CSO,Christina Laplante,2/1/1989,employee
-Matthew Ius,Management,Manager,Christina Laplante,1/2/1990,employee
-Meiko Chu,Administration,,Christina Laplante,7/15/1973,employee
-Michael Birch,Project Management,Crane Operator,Christina Laplante,3/18/1971,employee
-Micheal Parragh,Project Management,Welder,Christina Laplante,7/11/1979,employee
-Navid Salehi Najafabadi,Management,Project Manager,Christina Laplante,4/15/1989,employee
-Raphael Coelho,,,Christina Laplante,6/30/1989,employee
-Ray Keyland,Field,Crane Operator,Christina Laplante,9/2/1965,employee
-Richard McNaughton,Management,Estimator / Project Manager,Christina Laplante,11/8/1968,employee
-Robert Grootendorst,Management,Fleet Manager,Christina Laplante,7/12/1992,employee
-Ryan Khunkhun,Operations,"Plumber, Red Seal",Christina Laplante,8/9/1988,employee
-Theodore Cholevas,Management,Estimator / Project Manager,Christina Laplante,6/24/1974,employee
-Yvan Laplante,Field,Bin Driver,Christina Laplante,,employee
-Gurjinder Singh,Field,Sheet Metal Fabricator,Christopher Davy,6/15/1987,employee
-Jaime Kantor,Field,Sheet Metal Fabricator,Christopher Davy,8/20/2002,employee
-Anh Pham,Field,Labourer,Daniel Antoni,9/1/1984,employee
-Anthony Arsalan,Field,Labourer,Daniel Antoni,7/4/1988,employee
-Bat Pham,Field,,Daniel Antoni,5/19/1982,employee
-Dieptan Nguyen,Field,"Roofer, Level 3",Daniel Antoni,7/28/1985,employee
-Duc Hoang,Project Management,"Roofer, Red Seal",Daniel Antoni,11/1/1981,employee
-Dung Nguyen,Field,Labourer,Daniel Antoni,6/7/1966,employee
-Hanh Bui,Field,Labourer,Daniel Antoni,12/2/1958,employee
-Hoai Anh Dau,Field,Labourer,Daniel Antoni,11/7/1999,employee
-Hop Nguyen,Field,,Daniel Antoni,6/12/1970,employee
-Hop Pham,Field,Labourer,Daniel Antoni,1/21/1958,employee
-Khanh Luong,Field,Labourer,Daniel Antoni,,employee
-Kien Quach,Field,,Daniel Antoni,6/1/1971,employee
-Ky Do,Field,"Roofer, Level 2",Daniel Antoni,9/23/1978,employee
-Long Huynh,Field,Labourer,Daniel Antoni,11/11/1970,employee
-Long Tran,Field,,Daniel Antoni,1/15/1981,employee
-Martin Cirip,Field,Labourer,Daniel Antoni,4/12/2006,employee
-Nghia Nguyen,Field,Labourer,Daniel Antoni,5/7/1974,employee
-Nghia Tran,Project Management,"Roofer, Red Seal",Daniel Antoni,10/31/1986,employee
-Phung Bui,Field,Labourer,Daniel Antoni,6/4/1994,employee
-Phuoc Huynh,Field,,Daniel Antoni,4/22/1963,employee
-Phuong Phan,Field,Labourer,Daniel Antoni,10/17/1972,employee
-Samuel Antoni,Field,Labourer,Daniel Antoni,,employee
-Shawn Dowd,Field,"Roofer, Red Seal",Daniel Antoni,2/7/1965,employee
-Shawn Tran,Field,,Daniel Antoni,5/27/1978,employee
-Sy Nguyen,Project Management,Labourer,Daniel Antoni,1/30/1973,employee
-Tai Nguyen,Field,Labourer,Daniel Antoni,5/2/1985,employee
-Tan Dao,Field,Labourer,Daniel Antoni,7/8/1960,employee
-Tien Nguyen,Field,Labourer,Daniel Antoni,12/9/1970,employee
-Truong Do,Field,Labourer,Daniel Antoni,9/23/1964,employee
-Tuan Nguyen,Operations,Labourer,Daniel Antoni,,employee
-Tuan Vu,Field,,Daniel Antoni,10/19/1984,employee
-Xuan Nguyen,Field,,Daniel Antoni,11/27/1970,employee
-Edension Baguiao,Field,Labourer,Girard Tablate,3/25/1982,employee
-Edgar Tablate,Field,LMIA Roofer Helper,Girard Tablate,10/27/1980,employee
-Herson Tanamor,Field,LMIA Roofer Helper,Girard Tablate,5/6/1996,employee
-Jasper Tablate,Field,LMIA Roofer Helper,Girard Tablate,11/21/1975,employee
-Joeven Sundo,Field,Labourer,Girard Tablate,12/21/1990,employee
-John Oliver Tanamor,Field,LMIA Roofer Helper,Girard Tablate,8/23/1992,employee
-Randy Sundo,Field,LMIA Roofer Helper,Girard Tablate,5/19/1987,employee
-Amit Gindha,Field,LMIA Roofer Helper,Harley Laplante,9/24/1997,employee
-Amritpal Singh,Field,LMIA Roofer,Harley Laplante,10/8/1992,employee
-Baljinder Singh,Field,LMIA Roofer,Harley Laplante,2/27/1995,employee
-Benjamin Lang,Project Management,"Roofer, Red Seal",Harley Laplante,7/28/1993,employee
-Bryan Hayward,Field,"Roofer, Level 1",Harley Laplante,3/4/1991,employee
-Co Van,Field,Labourer,Harley Laplante,12/10/1958,employee
-Cody Girard,Field,Labourer,Harley Laplante,7/8/1994,employee
-Evan Paiva,Field,"Roofer, Level 3",Harley Laplante,6/25/1990,employee
-Faisal Pakeh,Field,Labourer,Harley Laplante,12/9/1982,employee
-Gage Swejda,Field,Journeyman,Harley Laplante,9/4/2003,employee
-Harmanmeet Singh,Field,Labourer,Harley Laplante,6/29/1992,employee
-Harminder Singh,Field,LMIA Roofer Helper,Harley Laplante,4/9/1985,employee
-Harwinder Sekhon,Field,Labourer,Harley Laplante,6/8/2004,employee
-Henry Ohia,Field,Labourer,Harley Laplante,3/20/1992,employee
-James Goodfellow,Field,,Harley Laplante,8/17/1988,employee
-Jobanpreet Singh,Field,LMIA Roofer Helper,Harley Laplante,1/5/2002,employee
-Martin Lavoie,Field,,Harley Laplante,5/22/1978,employee
-Rakesh Kumar,Field,Carpenter,Harley Laplante,7/18/1986,employee
-Ranjit Singh,Field,LMIA Roofer Helper,Harley Laplante,7/23/1985,employee
-Sukhpiar Teza,Field,LMIA Roofer Helper,Harley Laplante,12/4/1981,employee
-Sukhwinder Singh,Project Management,LMIA Roofer,Harley Laplante,1/25/1977,employee
-Thomas Clement,Field,,Harley Laplante,11/1/1999,employee
-Yuvraj Singh,Field,Labourer,Harley Laplante,8/22/2003,employee
-Hung Dich,Operations,"Electrician, Helper",Hung Huynh,12/15/1983,employee
-Oscar Lacson,Operations,Welder,Hung Huynh,12/10/1958,employee
-Abdus Salam,Project Management,"Roofer, Level 1",James Spillard ,6/10/1985,employee
-Alfredo Tirelli,Field,Labourer,James Spillard ,4/21/1992,employee
-Andrew Blow,Project Management,"Roofer, Red Seal",James Spillard ,3/21/1995,employee
-Bikramjit Singh,Field,LMIA Roofer Helper,James Spillard ,3/28/1996,employee
-Jaskarnpreet Singh,Field,Labourer,James Spillard ,12/25/2003,employee
-Khurum Khan,Field,"Roofer, Level 1",James Spillard ,11/10/1987,employee
-Mannan Mannan,Field,LMIA Roofer,James Spillard ,12/18/1984,employee
-Manpreet Singh,Field,LMIA Roofer Helper,James Spillard ,9/8/2001,employee
-MD Masum Billah,Field,LMIA Carpenter,James Spillard ,4/10/1978,employee
-MD Sohel Rana,Field,LMIA Roofer,James Spillard ,6/5/1986,employee
-MR Nure Alam,Field,LMIA Roofer,James Spillard ,2/4/1973,employee
-Nahid Nahid,Project Management,LMIA Roofer,James Spillard ,6/12/1990,employee
-Parminder Singh,Field,LMIA Roofer Helper,James Spillard ,1/4/1990,employee
-Zabed Mia,Field,LMIA Roofer Helper,James Spillard ,1/1/1993,employee
-Girard Tablate,Project Management,"Residential Steep Roofer, Red Seal",Jason Apps,11/28/1981,employee
-Samuel Couture-Girard,Project Management,Shingler,Jason Apps,1/26/1991,employee
-Samuel Gagne,Project Management,Shingler,Jason Apps,11/27/1993,employee
-Aaron Ritchie,Field,"Architectural Sheet Metal Worker, Red Seal",Jesse Hembrough,1/5/1982,employee
-Adina Lemke,Field,Metal Installer,Jesse Hembrough,4/8/2004,employee
-Andrew Linklater,Field,,Jesse Hembrough,4/13/2024,employee
-Christopher Roussel,Field,Metal Installer,Jesse Hembrough,10/23/1993,employee
-Daniel Burdekin,Project Management,Metal Installer,Jesse Hembrough,2/27/1990,employee
-John Temones,Field,Metal Installer,Jesse Hembrough,1/23/1992,employee
-Justin Kantor,Field,Metal Installer,Jesse Hembrough,9/13/2004,employee
-Kevyn Stich,Project Management,Metal Installer,Jesse Hembrough,11/24/1975,employee
-Mathew Jenkins,Project Management,"Architectural Sheet Metal Worker, Red Seal",Jesse Hembrough,3/16/1990,employee
-Michael Sweers,Project Management,Metal Installer,Jesse Hembrough,12/22/1973,employee
-Shaun Morgan,Field,Metal Installer,Jesse Hembrough,2/13/1987,employee
-Thomas Daniels,Operations,Metal Installer,Jesse Hembrough,8/29/1978,employee
-Tomas Miklos,Field,Metal Installer,Jesse Hembrough,,employee
-Tucker Laplante,Field,Metal Installer,Jesse Hembrough,9/4/1995,employee
-Viet Pham,Field,Metal Installer,Jesse Hembrough,1/23/1997,employee
-Jason Apps,Project Management,Superintendent,Martin Oldford,9/7/1967,employee
-Allan Urroz Diaz,Field,Labourer,Matthew Ius,10/10/2002,employee
-Amritpal Singh (#2),Field,Labourer,Matthew Ius,6/2/1998,employee
-Angel Garcia,Field,Labourer,Matthew Ius,2/1/1991,employee
-Antony Pomares Calderon,Field,Labourer,Matthew Ius,12/11/2001,employee
-Broxx Comia,Field,Apprentice,Matthew Ius,11/5/2001,employee
-Dolan Slingsby,Field,Journeyman,Matthew Ius,3/5/1996,employee
-Gonzalo Santos,Field,Foreman,Matthew Ius,11/14/1986,employee
-Jason Zemanek,Field,Site Superintendent,Matthew Ius,4/25/1978,employee
-Jesse Frederickson,Field,Apprentice,Matthew Ius,9/30/1999,employee
-Jeydin Lopez-Wingert,Field,Waterproofer,Matthew Ius,3/31/1998,employee
-Jordan Banakas,Field,Waterproofer,Matthew Ius,7/10/1996,employee
-Khushpreet Brar,Field,Labourer,Matthew Ius,9/9/1999,employee
-Kuldeep Villon,Field,,Matthew Ius,12/11/1994,employee
-Levi Span,Field,Journeyman,Matthew Ius,,employee
-Liam Cameron,Field,Labourer,Matthew Ius,1/13/2003,employee
-Parmeet Singh,Field,Labourer,Matthew Ius,12/3/2005,employee
-Sandy Finnegan,Field,Labourer,Matthew Ius,1/21/1993,employee
-Sarmel Singh,Field,LMIA Waterproofer,Matthew Ius,4/15/1988,employee
-Shaik Ali,Field,Labourer,Matthew Ius,6/20/1984,employee
-Shawn Nestor,Field,Waterproofer,Matthew Ius,3/3/1971,employee
-Tommy Gaudreau,Project Management,Waterproofer,Matthew Ius,5/29/1998,employee
-Tyler Cummings,Field,Site Supervisor,Matthew Ius,8/5/1988,employee
-Tanner Behrendt,Operations,,Robert Grootendorst,3/18/2004,employee
-Dominik Vrba,Field,Labourer,Ryan Khunkhun,10/8/2006,employee
-Donald Peras,Field,LMIA Roofer Helper,Samuel Couture-Girard,10/31/1985,employee
-Hinry Vilog,Field,Labourer,Samuel Couture-Girard,8/3/1973,employee
-Joel Costelo,Field,LMIA Roofer Helper,Samuel Couture-Girard,2/20/1982,employee
-John Balanial,Field,Labourer,Samuel Couture-Girard,3/14/1994,employee
-Rene Peras,Field,Labourer,Samuel Couture-Girard,12/27/1971,employee
-Temhar Imao,Field,Labourer,Samuel Couture-Girard,9/6/1983,employee
-Alex Costelo,Project Management,Shingler,Samuel Gagne,9/25/1977,employee
-Gurpreet Singh,Field,Labourer,Samuel Gagne,3/8/2000,employee
-Gurpreet Singh #2,Field,LMIA Roofer Helper,Samuel Gagne,5/10/1986,employee
-Hakam Singh,Field,LMIA Roofer Helper,Samuel Gagne,7/5/1990,employee
-Mohammed Salauddin,Field,LMIA Roofer,Samuel Gagne,5/1/1983,employee
-Rajanpreet Singh,Field,Labourer,Samuel Gagne,11/6/2001,employee
-Bernard Victorino Fronda,Field,,Samuel Couture-Girard,9/22/1985,employee
-Cristopher Esquibel,Field,LMIA Roofer Helper,Samuel Couture-Girard,12/17/1986,employee
-Raymond Fernando,Field,LMIA Roofer Helper,Samuel Couture-Girard,9/12/1987,employee
-Reymund Agbunag,Field,LMIA Roofer Helper,Samuel Couture-Girard,10/29/1992,employee
+,name,department,job title,supervisorname,birthdate,role,email
+0,Aaron Ritchie,Field,"Architectural Sheet Metal Worker, Red Seal",Jesse Hembrough,1/5/1982,employee,aaronritchiemusic@gmail.com
+1,Abdus Salam,Project Management,"Roofer, Level 1",James Spillard ,6/10/1985,employee,abdus.salam@mackkirkroofing.com
+2,Adam Alva ,Field,Metal Installer ,Jesse Hembrough,11/7/1989,,a.k.Alva1989@Gmail.com
+3,Adam Tutte ,Project Management,Metal Cladding ,Christina Laplante,11/12/1979,,adam@mackkirk.com
+4,Adina Lemke,Field,Metal Installer,Jesse Hembrough,4/8/2004,employee,adinalemke1@gmail.com
+5,Alan Cartridge,Field,Carpenter,Christina Laplante,10/28/1985,employee,alancartridge01@gmail.com
+6,Alex Costelo,Project Management,Shingler,Samuel Gagne,9/25/1977,employee,rosellacostelo@yahoo.com
+7,Alfredo Tirelli,Field,Labourer,James Spillard ,4/21/1992,employee,atirelli22@gmail.com
+8,Allan Urroz Diaz,Field,Labourer,Matthew Ius,10/10/2002,employee,allandiaz0009@gmail.com
+9,Amit Gindha,Field,LMIA Roofer Helper,Harley Laplante,9/24/1997,employee,gindhaamit@gmail.com
+10,Amritpal Singh,Field,LMIA Roofer,Harley Laplante,10/8/1992,employee,deepjntce@gmail.com
+11,Amritpal Singh (#2),Field,Labourer,Matthew Ius,6/2/1998,employee,amritdhillon4660@gmail.com
+12,Andrew Blow,Project Management,"Roofer, Red Seal",James Spillard ,3/21/1995,employee,andrew.blow00@gmail.com
+13,Andrew Linklater,Field,,Jesse Hembrough,4/13/2024,employee,
+14,Angel Garcia,Field,Labourer,Matthew Ius,2/1/1991,employee,angeluzhdzgarcia@gmail.com
+15,Angelina Higden,Admin,Controller,Christina Laplante,8/19/1966,employee,angie@mackkirkroofing.com
+16,Anh Pham,Field,Labourer,Daniel Antoni,9/1/1984,employee,phamtung873@gmail.com
+17,Anthony Arsalan,Field,Labourer,Daniel Antoni,7/4/1988,employee,arsalan_angha@hotmail.com
+18,Antony Pomares Calderon,Field,Labourer,Matthew Ius,12/11/2001,employee,antonypomares40@gmail.com
+19,Arthur Karibyan,Field,Metal Installer,Jesse Hembrough,11/18/2006,,karibyanarthur@gmail.com
+20,Baljinder Singh,Field,LMIA Roofer,Harley Laplante,2/27/1995,employee,baljindersekhon29@gmail.com
+21,Bat Pham,Field,,Daniel Antoni,5/19/1982,employee,batpham1983@yahoo.ca
+22,Benjamin Lang,Project Management,"Roofer, Red Seal",Harley Laplante,7/28/1993,employee,benlang93@gmail.com
+23,Bernard Victorino Fronda,Field,,Samuel Couture-Girard,9/22/1985,employee,frondabernardvictorino@gmail.com
+24,Bianca Laplante,Admin,"Business Administration, HR",Christina Laplante,2/27/1997,employee,bianca@mackkirkroofing.com
+25,Bikramjit Singh,Field,LMIA Roofer Helper,James Spillard ,3/28/1996,employee,bikramdosanjh26@gmail.com
+26,Blair Bennett,Management,Business Development Manager,Christina Laplante,5/28/1971,employee,blair@mackkirkroofing.com
+27,Breanne Topham,Admin,Administrator,Christina Laplante,1/10/1992,employee,bree_topham@hotmail.com
+28,Brijesh Patel,Operations,Janitor / Groundskeeper,Christina Laplante,9/18/1984,employee,patelbrijesh189@gmail.com
+29,Broxx Comia,Field,Apprentice,Matthew Ius,11/5/2001,employee,Comiabroxx@gmail.com
+30,Bryan Hayward,Field,"Roofer, Level 1",Harley Laplante,3/4/1991,employee,bhayward66@gmail.com
+31,Chris Harding,Field,Yard Coordinator,Christina Laplante,10/28/1971,employee,chrisharding1971@hotmail.com
+32,Christina Laplante,Management,Director,Christina Laplante,8/11/1972,manager,chris@mackkirkroofing.com
+33,Christopher Burdekin,Management,Project Manager,Christina Laplante,5/24/1985,employee,chrisb@mackkirkroofing.com
+34,Christopher Davy,Management,Sheet Metal Shop Manager,Christina Laplante,2/24/1971,employee,corey@mackkirkroofing.com
+35,Christopher Finnson,Management,CW Logistics Coordinator,Christina Laplante,10/9/1987,employee,cfinnson@mackkirk.com
+36,Christopher Lindeman,Management,Estimator / Project Manager,Christina Laplante,4/10/1978,employee,lindeman@mackkirkroofing.com
+37,Christopher Roussel,Field,Metal Installer,Jesse Hembrough,10/23/1993,employee,Christopher_Roussel@hotmail.com
+38,Co Van,Field,Labourer,Harley Laplante,12/10/1958,employee,tranvanco288@gmail.com
+39,Cody Girard,Field,Labourer,Harley Laplante,7/8/1994,employee,cody.girard@outlook.com
+40,Cristopher Esquibel,Field,LMIA Roofer Helper,Samuel Couture-Girard,12/17/1986,employee,cristopheresquibel17@gmail.com
+41,Dakota Focht,Field,Metal Cladding ,Adam Tutte ,9/29/1991,,dakota_focht@hotmail.com
+42,Daniel Antoni,Project Management,Superintendent,Christina Laplante,5/5/1976,supervisor,dantonisko@gmail.com
+43,Daniel Burdekin,Project Management,Metal Installer,Jesse Hembrough,2/27/1990,employee,dan.burdekin27@gmail.com
+44,Daryl Morrison,Operations,Estimator / Project Manager,Christina Laplante,8/2/1962,,daryl@mackkirk.com
+45,David Falkins,Field,Bin Driver,Christina Laplante,5/2/1958,employee,dfalkins@telus.net
+46,Derrick Bequette,Field,Crane Operator,Christina Laplante,6/26/1981,employee,predatorroofing@hotmail.com
+47,Dieptan Nguyen,Field,"Roofer, Level 3",Daniel Antoni,7/28/1985,employee,jacob_nguyen2018@hotmail.com
+48,Dolan Slingsby,Field,Journeyman,Matthew Ius,3/5/1996,employee,duperslangs@outlook.com
+49,Dominik Vrba,Field,Labourer,Ryan Khunkhun,10/8/2006,employee,dominik.v.cwc@gmail.com
+50,Donald Peras,Field,LMIA Roofer Helper,Samuel Couture-Girard,10/31/1985,employee,dperas0723@gmail.com
+51,Duc Hoang,Project Management,"Roofer, Red Seal",Daniel Antoni,11/1/1981,employee,ducson81@hotmail.com
+52,Dung Nguyen,Field,Labourer,Daniel Antoni,6/7/1966,employee,hangbc604@yahoo.com
+53,Edension Baguiao,Field,Labourer,Girard Tablate,3/25/1982,employee,ediesonbaguiao25@gmail.com
+54,Edgar Tablate,Field,LMIA Roofer Helper,Girard Tablate,10/27/1980,employee,edgarryantablate@gmail.com
+55,Evan Paiva,Field,"Roofer, Level 3",Harley Laplante,6/25/1990,employee,paivaevan@gmail.com
+56,Faisal Pakeh,Field,Labourer,Harley Laplante,12/9/1982,employee,tanipisang@gmail.com
+57,Fernando Junior,IT,,Christina Laplante,2/20/1996,,fernandorabelo_jr@hotmail.com
+58,Fraser Cartridge,Field,Landscaper,Christina Laplante,4/8/1988,employee,
+59,Gabriela Rytir,Admin,Admin Coordinator,Christina Laplante,3/1/1979,employee,gabi@mackkirk.com
+60,Gage Swejda,Field,Journeyman,Harley Laplante,9/4/2003,employee,gswejda1@gmail.com
+61,George Brown,Field,Yard Manager,Christina Laplante,9/26/1968,employee,acegadb@hotmail.com
+62,Gino Laplante,Management,Director,Christina Laplante,2/27/1972,employee,gino@mackkirkroofing.com
+63,Girard Tablate,Project Management,"Residential Steep Roofer, Red Seal",Jason Apps,11/28/1981,employee,girard@mackkirkroofing.com
+64,Gonzalo Santos,Field,Foreman,Matthew Ius,11/14/1986,employee,ggalavizsantos07@gmail.com
+65,Gurjinder Singh,Field,Sheet Metal Fabricator,Christopher Davy,6/15/1987,employee,princeraj111987@gmail.com
+66,Gurpreet Singh,Field,Labourer,Samuel Gagne,3/8/2000,employee,gurpreetsingh08031@gmail.com
+67,Gurpreet Singh #2,Field,LMIA Roofer Helper,Samuel Gagne,5/10/1986,employee,gurpreetsinghlidhar0098@gmail.com
+68,Hakam Singh,Field,LMIA Roofer Helper,Samuel Gagne,7/5/1990,employee,hakamsamr@gmail.com
+69,Hanh Bui,Field,Labourer,Daniel Antoni,12/2/1958,employee,buivanhanh1958@gmail.com
+70,Harley Laplante,Project Management,"Roofer, Red Seal",Christina Laplante,5/7/1998,employee,harley.365@icloud.com
+71,Harmanmeet Singh,Field,Labourer,Harley Laplante,6/29/1992,employee,mr.harmanmeetbrar@gmail.com
+72,Harmail Singh ,Field,Labourer,Harley Laplante,4/15/1985,,lavi65841@gmail.com
+73,Harminder Singh,Field,LMIA Roofer Helper,Harley Laplante,4/9/1985,employee,sonubatala45@gmail.com
+74,Harwinder Sekhon,Field,Labourer,Harley Laplante,6/8/2004,employee,harrysekhon7872@gmail.com
+75,Henry Ohia,Field,Labourer,Harley Laplante,3/20/1992,employee,ohiahenry2017@gmail.com
+76,Herson Tanamor,Field,LMIA Roofer Helper,Girard Tablate,5/6/1996,employee,pampytanamor35@gmail.com
+77,Hinry Vilog,Field,Labourer,Samuel Couture-Girard,8/3/1973,employee,viloghinry4@gmail.com
+78,Hoai Anh Dau,Field,Labourer,Daniel Antoni,11/7/1999,employee,dauanh711@gmail.com
+79,Hop Nguyen,Field,,Daniel Antoni,6/12/1970,employee,hopn9000@gmail.com
+80,Hop Pham,Field,Labourer,Daniel Antoni,1/21/1958,employee,hoppham37961958@gmail.com
+81,Hung Dich,Operations,"Electrician, Helper",Hung Huynh,12/15/1983,employee,dichlyhung@gmail.com
+82,Hung Huynh,Operations,Electrician,Christina Laplante,5/17/1964,employee,newcenturyelectricltd@yahoo.ca
+83,Jaime Kantor,Field,Sheet Metal Fabricator,Christopher Davy,8/20/2002,employee,Jaimekantor0@gmail.com
+84,James Goodfellow,Field,,Harley Laplante,8/17/1988,employee,jgoodfellow284@gmail.com
+85,James Palylyk,IT,IT Manager,Christina Laplante,7/23/1978,employee,james@mackkirkroofing.com
+86,James Spillard,Management,Roofing Maintenance & Quality Control Coordinator,Christina Laplante,9/1/1986,employee,jspillard@mackkirk.com
+87,Jaskarnpreet Singh,Field,Labourer,James Spillard ,12/25/2003,employee,jas.ca142039@gmail.com
+88,Jason Apps,Project Management,Superintendent,Martin Oldford,9/7/1967,employee,jason@mackkirkroofing.com
+89,Jason Zemanek,Field,Site Superintendent,Matthew Ius,4/25/1978,employee,jayzemanek@hotmail.com
+90,Jasper Tablate,Field,LMIA Roofer Helper,Girard Tablate,11/21/1975,employee,jaspertablate10@gmail.com
+91,Jesse Frederickson,Field,Apprentice,Matthew Ius,9/30/1999,employee,jessefrederickson99@gmail.com
+92,Jesse Hembrough,Project Management,Superintendent,Christina Laplante,7/15/1977,employee,jhembrough@hotmail.com
+93,Jeydin Lopez-Wingert,Field,Waterproofer,Matthew Ius,3/31/1998,employee,jeydinlopezwingert1@gmail.com
+94,Jobanpreet Singh,Field,LMIA Roofer Helper,Harley Laplante,1/5/2002,employee,jobandhaliwal131@gmail.com
+95,Joel Costelo,Field,LMIA Roofer Helper,Samuel Couture-Girard,2/20/1982,employee,joelcostelo79@gmail.com
+96,Joeven Sundo,Field,Labourer,Girard Tablate,12/21/1990,employee,iyuttachi1100@yahoo.com
+97,John Balanial,Field,Labourer,Samuel Couture-Girard,3/14/1994,employee,jrmbalanial@gmail.com
+98,John Oliver Tanamor,Field,LMIA Roofer Helper,Girard Tablate,8/23/1992,employee,tanamornon8@gmail.com
+99,John Temones,Field,Metal Installer,Jesse Hembrough,1/23/1992,employee,Temones.john@gmail.com
+100,John Walsh,Management,Estimator / Project Manager,Christina Laplante,6/27/1976,employee,Callum@mackkirkroofing.com
+101,Jon Arnold,Operations,Construction and Projects Facilitator,Christina Laplante,,employee,jaarrnold@outlook.com
+102,Jordan Banakas,Field,Waterproofer,Matthew Ius,7/10/1996,employee,jordanbanakas@yahoo.com
+103,Justin Kantor,Field,Metal Installer,Jesse Hembrough,9/13/2004,employee,justinkantorwork@gmail.com
+104,Karen Jones,Admin,Controller,Christina Laplante,,employee,karen@mackkirk.com
+105,Kevyn Stich,Project Management,Metal Installer,Jesse Hembrough,11/24/1975,employee,kevynstich@gmail.com
+106,Khanh Luong,Field,Labourer,Daniel Antoni,,employee,lkduong511@gmail.com
+107,Khurum Khan,Field,"Roofer, Level 1",James Spillard ,11/10/1987,employee,khurum307@gmail.com
+108,Khushpreet Brar,Field,Labourer,Matthew Ius,9/9/1999,employee,khushb324@gmail.com
+109,Kien Quach,Field,,Daniel Antoni,6/1/1971,employee,quachkien604@yahoo.com
+110,Krystle Gaudreau,Management,Administrative Assistant,Christina Laplante,4/13/1993,employee,krystlegaudreau@icloud.com
+111,Kuldeep Villon,Field,,Matthew Ius,12/11/1994,employee,VILLON284@gmail.com
+112,Ky Do,Field,"Roofer, Level 2",Daniel Antoni,9/23/1978,employee,kyquocdo123@gmail.com
+113,Kyle Watson,Management,Estimator / Project Manager,Christina Laplante,4/25/1989,employee,kwatson333@hotmail.com
+114,Lee Ouderkirk,Project Management,Superintendent,Christina Laplante,1/14/1960,employee,blee@mackkirkroofing.com
+115,Levi Span,Field,Journeyman,Matthew Ius,,employee,levispan91@gmail.com
+116,Liam Cameron,Field,Labourer,Matthew Ius,1/13/2003,employee,liam.cam1738@gmail.com
+117,Long Huynh,Field,Labourer,Daniel Antoni,11/11/1970,employee,anlonghuynh@yahoo.com
+118,Long Tran,Field,,Daniel Antoni,1/15/1981,employee,mail.to.anthonytran@gmail.com
+119,Michael Cuthbert,Field,Metal Installer ,Jesse Hembrough,3/1/1990,,michael.cuthbert@hotmail.com
+120,Mannan Mannan,Field,LMIA Roofer,James Spillard ,12/18/1984,employee,mannan_dtg@yahoo.com
+121,Manpreet Singh,Field,LMIA Roofer Helper,James Spillard ,9/8/2001,employee,sidhu6388@gmail.com
+122,Martin Cirip,Field,Labourer,Daniel Antoni,4/12/2006,employee,mscirip@gmail.com
+123,Martin Lavoie,Field,,Harley Laplante,5/22/1978,employee,bestinbigtown@gmail.com
+124,Martin Oldford,Management,Estimator / Project Manager,Christina Laplante,7/21/1970,employee,marty@mackkirkroofing.com
+125,Mathew Jenkins,Project Management,"Architectural Sheet Metal Worker, Red Seal",Jesse Hembrough,3/16/1990,employee,matjenkins@gmail.com
+126,Matt Stoddart,Management,CSO,Christina Laplante,2/1/1989,employee,a.mstoddart2016@gmail.com
+127,Matthew Ius,Management,Manager,Christina Laplante,1/2/1990,employee,matt@mackkirkroofing.com
+128,MD Masum Billah,Field,LMIA Carpenter,James Spillard ,4/10/1978,employee,masum.bd.sg@gmail.com
+129,MD Sohel Rana,Field,LMIA Roofer,James Spillard ,6/5/1986,employee,mdsohelr733@gmail.com
+130,Meiko Chu,Administration,,Christina Laplante,7/15/1973,employee,meiko@mackkirk.com
+131,Michael Birch,Project Management,Crane Operator,Christina Laplante,3/18/1971,employee,mikey197140@gmail.com
+132,Michael Sweers,Project Management,Metal Installer,Jesse Hembrough,12/22/1973,employee,redmush.ms@gmail.com
+133,Micheal Parragh,Project Management,Welder,Christina Laplante,7/11/1979,employee,mike_weld@mackkirkroofing.com
+134,Mohammed Salauddin,Field,LMIA Roofer,Samuel Gagne,5/1/1983,employee,apunsg@gmail.com
+135,MR Nure Alam,Field,LMIA Roofer,James Spillard ,2/4/1973,employee,nurealamjdc@gmail.com
+136,Nahid Nahid,Project Management,LMIA Roofer,James Spillard ,6/12/1990,employee,nahidnahida90@gmail.com
+137,Navid Salehi Najafabadi,Management,Project Manager,Christina Laplante,4/15/1989,employee,
+138,Nghia Nguyen,Field,Labourer,Daniel Antoni,5/7/1974,employee,nghianguyenba604@gmail.com
+139,Nghia Tran,Project Management,"Roofer, Red Seal",Daniel Antoni,10/31/1986,employee,recognize111@live.com
+140,Oscar Lacson,Operations,Welder,Hung Huynh,12/10/1958,employee,oscarlacson@gmail.com
+141,Parmeet Singh,Field,Labourer,Matthew Ius,12/3/2005,employee,parmeetsaini5263@gmail.com
+142,Parminder Singh,Field,LMIA Roofer Helper,James Spillard ,1/4/1990,employee,pinda0415@gmail.com
+143,Phung Bui,Field,Labourer,Daniel Antoni,6/4/1994,employee,buixuanphung46@gmail.com
+144,Phuoc Huynh,Field,,Daniel Antoni,4/22/1963,employee,Hp128198@gmail.com
+145,Phuong Phan,Field,Labourer,Daniel Antoni,10/17/1972,employee,huyennguyen28@rocketmail.com
+146,Rajanpreet Singh,Field,Labourer,Samuel Gagne,11/6/2001,employee,Rajanpreet060@gmail.com
+147,Rakesh Kumar,Field,Carpenter,Harley Laplante,7/18/1986,employee,rakeshsingh121.kumar@gmail.com
+148,Randy Sundo,Field,LMIA Roofer Helper,Girard Tablate,5/19/1987,employee,randysundo@yahoo.com
+149,Ranjit Singh,Field,LMIA Roofer Helper,Harley Laplante,7/23/1985,employee,sr2947668@gmail.com
+150,Raphael Coelho,,,Christina Laplante,6/30/1989,employee,raph.vcc@gmail.com
+151,Ray Keyland,Field,Crane Operator,Christina Laplante,9/2/1965,employee,stingray5011@gmail.com
+152,Raymond Fernando,Field,LMIA Roofer Helper,Samuel Couture-Girard,9/12/1987,employee,oke091287@gmail.com
+153,Regan Tapp,Field,Metal Installer,Jesse Hembrough,4/22/1964,,Regantapp4004@gmail.com
+154,Rene Peras,Field,Labourer,Samuel Couture-Girard,12/27/1971,employee,reneperas47@gmail.com
+155,Reymund Agbunag,Field,LMIA Roofer Helper,Samuel Couture-Girard,10/29/1992,employee,agbunagreymund29@gmail.com
+156,Richard McNaughton,Management,Estimator / Project Manager,Christina Laplante,11/8/1968,employee,richard@mackkirkroofing.com
+157,Robert Grootendorst,Management,Fleet Manager,Christina Laplante,7/12/1992,employee,rgrootendorst92@gmail.com
+158,Ryan Khunkhun,Operations,"Plumber, Red Seal",Christina Laplante,8/9/1988,employee,ryank_01@hotmail.com
+159,Samuel Antoni,Field,Labourer,Daniel Antoni,,employee,sam.antoni2008@gmail.com
+160,Samuel Couture-Girard,Project Management,Shingler,Jason Apps,1/26/1991,employee,couturedrift24@hotmail.com
+161,Samuel Gagne,Project Management,Shingler,Jason Apps,11/27/1993,employee,samuelgagne2711@hotmail.com
+162,Sandy Finnegan,Field,Labourer,Matthew Ius,1/21/1993,employee,Dizzydezzy@hotmail.ca
+163,Sarmel Singh,Field,LMIA Waterproofer,Matthew Ius,4/15/1988,employee,SARMELSINGH2@gmail.com
+164,Shaik Ali,Field,Labourer,Matthew Ius,6/20/1984,employee,showkatali3882@gmail.com
+165,Shaun Morgan,Field,Metal Installer,Jesse Hembrough,2/13/1987,employee,smorgan01092019@gmail.com
+166,Shawn Dowd,Field,"Roofer, Red Seal",Daniel Antoni,2/7/1965,employee,dragonspi@hotmail.com
+167,Shawn Nestor,Field,Waterproofer,Matthew Ius,3/3/1971,employee,shawndingman1@icloud.com
+168,Shawn Tran,Field,,Daniel Antoni,5/27/1978,employee,Shawntrinhtran@gmail.com
+169,Sukhpiar Teza,Field,LMIA Roofer Helper,Harley Laplante,12/4/1981,employee,tezasukhpiar@icloud.com
+170,Sukhwinder Singh,Project Management,LMIA Roofer,Harley Laplante,1/25/1977,employee,sukhsinghsaini41@gmail.com
+171,Sy Nguyen,Project Management,Labourer,Daniel Antoni,1/30/1973,employee,sam.nguyen569@yahoo.ca
+172,Tai Nguyen,Field,Labourer,Daniel Antoni,5/2/1985,employee,tainguyen2001@yahoo.ca
+173,Tan Dao,Field,Labourer,Daniel Antoni,7/8/1960,employee,tandao4793@gmail.com
+174,Tanner Behrendt,Operations,,Robert Grootendorst,3/18/2004,employee,tannerbehrendt230@gmail.com
+175,Temhar Imao,Field,Labourer,Samuel Couture-Girard,9/6/1983,employee,imao.temhar@yahoo.com.ph
+176,Theodore Cholevas,Management,Estimator / Project Manager,Christina Laplante,6/24/1974,employee,tcholevas01@gmail.com
+177,Thomas Clement,Field,,Harley Laplante,11/1/1999,employee,tgclement485@gmail.com
+178,Thomas Daniels,Operations,Metal Installer,Jesse Hembrough,8/29/1978,employee,Subbaboy98@gmail.com
+179,Tien Nguyen,Field,Labourer,Daniel Antoni,12/9/1970,employee,ntien0420@gmail.com
+180,Tomas Miklos,Field,Metal Installer,Jesse Hembrough,,employee,Tommiklos3@gmail.com
+181,Tommy Gaudreau,Project Management,Waterproofer,Matthew Ius,5/29/1998,employee,gaudreautommy@hotmail.com
+182,Truong Do,Field,Labourer,Daniel Antoni,9/23/1964,employee,dotruongmanh64@gmail.com
+183,Tuan Nguyen,Operations,Labourer,Daniel Antoni,,employee,manhtuan14qn@gmail.com
+184,Tuan Vu,Field,,Daniel Antoni,10/19/1984,employee,Tuanvu190521@gmail.com
+185,Tucker Laplante,Field,Metal Installer,Jesse Hembrough,9/4/1995,employee,tuckerlaplante@shaw.ca
+186,Tyler Cummings,Field,Site Supervisor,Matthew Ius,8/5/1988,employee,tylerjcummings88@gmail.com
+187,Viet Pham,Field,Metal Installer,Jesse Hembrough,1/23/1997,employee,bvpham7@gmail.com
+188,Xuan Nguyen,Field,,Daniel Antoni,11/27/1970,employee,
+189,Yuvraj Singh,Field,Labourer,Harley Laplante,8/22/2003,employee,yuvrajswag6@gmail.com
+190,Yvan Laplante,Field,Bin Driver,Christina Laplante,,employee,
+191,Zabed Mia,Field,LMIA Roofer Helper,James Spillard ,1/1/1993,employee,mdzaved93@gmail.com

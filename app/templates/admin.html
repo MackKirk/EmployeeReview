@@ -49,14 +49,30 @@
         {% for row in rows %}
         <tr class="hover:bg-gray-50">
           <td class="p-3 font-medium">{{ row.employee.name }}</td>
-          <td class="p-3">{{ row.employee.role }}</td>
-          <td class="p-3">{{ row.employee.supervisor_email or '' }}</td>
+          <td class="p-3">
+            <form method="post" action="/admin/update-employee/{{ row.employee.id }}" class="flex items-center space-x-2">
+              <select name="role" class="border rounded px-2 py-1">
+                {% for r in allowed_roles %}
+                  <option value="{{ r }}" {% if row.employee.role == r %}selected{% endif %}>{{ r }}</option>
+                {% endfor %}
+              </select>
+          </td>
+          <td class="p-3">
+              <select name="supervisor_name" class="border rounded px-2 py-1 w-56">
+                <option value="">None</option>
+                {% for n in names %}
+                  <option value="{{ n }}" {% if row.employee.supervisor_email == n %}selected{% endif %}>{{ n }}</option>
+                {% endfor %}
+              </select>
+          </td>
           <td class="p-3 text-center">{% if row.employee_done %}✅{% else %}❌{% endif %}</td>
           <td class="p-3 text-center">{% if row.supervisor_done %}✅{% else %}❌{% endif %}</td>
           <td class="p-3 text-center">{% if row.director_done %}✅{% else %}❌{% endif %}</td>
           <td class="p-3 text-center">{% if row.has_sent %}📧{% else %}—{% endif %}</td>
           <td class="p-3 text-center">{% if row.has_clicked %}🟢{% else %}—{% endif %}</td>
           <td class="p-3 text-center">
+              <button class="mr-3 bg-gray-100 px-3 py-1 rounded hover:bg-gray-200">Save</button>
+            </form>
             <form method="post" action="/admin/send-review-link/{{ row.employee.id }}" class="inline">
               <button class="text-blue-600 font-semibold hover:underline">Send email</button>
             </form>
@@ -66,6 +82,7 @@
         {% endfor %}
       </tbody>
     </table>
+    
   </div>
 </div>
 {% endblock %}
