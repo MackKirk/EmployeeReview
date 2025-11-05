@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Request, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.db import SessionLocal
-from app.models import Employee, Review
+from app.models import Employee, Review, EmailEvent
 from app.utils.auth_utils import get_current_user
 from app.utils.auth_utils import generate_magic_login_token
 from app.utils.email import send_email
@@ -139,6 +139,12 @@ async def admin_send_review_link(request: Request, employee_id: str):
         ok = send_email(emp.email, subject, html)
         if not ok:
             return HTMLResponse("Failed to send email (SMTP not configured?)", status_code=500)
+        try:
+            evt = EmailEvent(employee_id=emp.id, event_type="sent")
+            db.add(evt)
+            db.commit()
+        except Exception:
+            db.rollback()
         # Redirect back to admin page with a flash-like message via querystring
         return RedirectResponse("/admin", status_code=302)
     finally:
@@ -177,6 +183,12 @@ async def admin_send_review_links(request: Request, role: str = Form(None)):
             ok = send_email(emp.email, subject, html)
             if ok:
                 sent += 1
+                try:
+                    evt = EmailEvent(employee_id=emp.id, event_type="sent")
+                    db.add(evt)
+                    db.commit()
+                except Exception:
+                    db.rollback()
             else:
                 skipped += 1
         return HTMLResponse(f"Emails sent: {sent}. Skipped: {skipped}. Role filter: {role or 'all'}.", status_code=200)

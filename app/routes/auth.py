@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from app.db import SessionLocal
-from app.models import Employee  # ou Employee se for o modelo certo
+from app.models import Employee, EmailEvent  # ou Employee se for o modelo certo
 import os
 from app.utils.auth_utils import generate_magic_login_token, verify_magic_login_token
 
@@ -106,6 +106,14 @@ async def magic_login(request: Request, token: str):
         request.session["user_id"] = str(user.id)
         request.session["role"] = user.role
         request.session["name"] = user.name
+
+        # Log click event
+        try:
+            evt = EmailEvent(employee_id=user.id, event_type="clicked")
+            db.add(evt)
+            db.commit()
+        except Exception:
+            db.rollback()
 
         redirect_url = data.get("redirect") or "/home"
         return RedirectResponse(redirect_url, status_code=302)

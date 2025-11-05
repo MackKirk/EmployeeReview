@@ -40,6 +40,8 @@
           <th class="p-3 text-center">Self</th>
           <th class="p-3 text-center">Supervisor</th>
           <th class="p-3 text-center">Director</th>
+          <th class="p-3 text-center">Email</th>
+          <th class="p-3 text-center">Clicked</th>
           <th class="p-3 text-center">Action</th>
         </tr>
       </thead>
@@ -52,6 +54,8 @@
           <td class="p-3 text-center">{% if row.employee_done %}✅{% else %}❌{% endif %}</td>
           <td class="p-3 text-center">{% if row.supervisor_done %}✅{% else %}❌{% endif %}</td>
           <td class="p-3 text-center">{% if row.director_done %}✅{% else %}❌{% endif %}</td>
+          <td class="p-3 text-center">{% if row.has_sent %}📧{% else %}—{% endif %}</td>
+          <td class="p-3 text-center">{% if row.has_clicked %}🟢{% else %}—{% endif %}</td>
           <td class="p-3 text-center">
             <form method="post" action="/admin/send-review-link/{{ row.employee.id }}" class="inline">
               <button class="text-blue-600 font-semibold hover:underline">Send email</button>

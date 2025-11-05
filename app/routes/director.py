@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.db import SessionLocal
-from app.models import Employee, Review
+from app.models import Employee, Review, EmailEvent
 from app.utils.auth_utils import get_current_user
 from app.utils.questions import questions
 
@@ -111,11 +111,16 @@ async def admin_page(request: Request):
             employee_done = bool(r and r.employee_answers)
             supervisor_done = bool(r and r.supervisor_answers)
             director_done = bool(r and r.director_comments)
+            # Email tracking
+            has_sent = db.query(EmailEvent).filter_by(employee_id=emp.id, event_type="sent").first() is not None
+            has_clicked = db.query(EmailEvent).filter_by(employee_id=emp.id, event_type="clicked").first() is not None
             rows.append({
                 "employee": emp,
                 "employee_done": employee_done,
                 "supervisor_done": supervisor_done,
                 "director_done": director_done,
+                "has_sent": has_sent,
+                "has_clicked": has_clicked,
             })
     finally:
         db.close()

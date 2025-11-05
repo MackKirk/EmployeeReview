@@ -33,3 +33,10 @@ class Review(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     employee = relationship("Employee", foreign_keys=[employee_id])
 
+class EmailEvent(Base):
+    __tablename__ = "email_events"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    employee_id = Column(UUID(as_uuid=True), ForeignKey("employees.id"))
+    event_type = Column(String)  # 'sent' | 'clicked'
+    created_at = Column(DateTime, default=datetime.utcnow)
