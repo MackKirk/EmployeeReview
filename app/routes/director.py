@@ -235,7 +235,7 @@ async def admin_questions_editor(request: Request, role: str = "employee"):
 
 
 @router.post("/admin/questions", response_class=HTMLResponse)
-async def admin_questions_save(request: Request, role: str = Form("employee"), json: str = Form("")):
+async def admin_questions_save(request: Request, role: str = Form("employee"), json_text: str = Form("", alias="json")):
     current_user = get_current_user(request)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
@@ -246,12 +246,7 @@ async def admin_questions_save(request: Request, role: str = Form("employee"), j
         return HTMLResponse("Invalid role", status_code=400)
 
     try:
-        data = json_module.loads(json) if False else None  # placeholder to keep name unique
-    except Exception:
-        data = None
-    # Proper parse
-    try:
-        payload = json.loads(json)
+        payload = json.loads(json_text)
         if not isinstance(payload, list):
             raise ValueError("JSON must be a list of questions")
         # Basic validation
@@ -291,14 +286,14 @@ async def admin_questions_save(request: Request, role: str = Form("employee"), j
 
 
 @router.post("/admin/questions/preview", response_class=HTMLResponse)
-async def admin_questions_preview(request: Request, role: str = Form("employee"), json: str = Form("")):
+async def admin_questions_preview(request: Request, role: str = Form("employee"), json_text: str = Form("", alias="json")):
     current_user = get_current_user(request)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
 
     try:
-        payload = json.loads(json)
+        payload = json.loads(json_text)
         if not isinstance(payload, list):
             raise ValueError("JSON must be a list of questions")
     except Exception as e:
