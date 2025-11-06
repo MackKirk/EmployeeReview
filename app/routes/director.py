@@ -197,6 +197,9 @@ async def admin_open_review(request: Request, employee_id: str):
         return HTMLResponse("Access restricted", status_code=403)
 
     base_url = os.getenv("APP_BASE_URL", "http://localhost:8000")
+    if not (base_url.startswith("http://") or base_url.startswith("https://")):
+        base_url = "https://" + base_url
+    base_url = base_url.rstrip("/")
     db: Session = SessionLocal()
     try:
         emp = db.query(Employee).filter_by(id=employee_id).first()
@@ -285,3 +288,24 @@ async def admin_questions_save(request: Request, role: str = Form("employee"), j
 
     from fastapi.responses import RedirectResponse
     return RedirectResponse(f"/admin/questions?role={role}&message=Saved", status_code=302)
+
+
+@router.post("/admin/questions/preview", response_class=HTMLResponse)
+async def admin_questions_preview(request: Request, role: str = Form("employee"), json: str = Form("")):
+    current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
+        return HTMLResponse("Access restricted", status_code=403)
+
+    try:
+        payload = json.loads(json)
+        if not isinstance(payload, list):
+            raise ValueError("JSON must be a list of questions")
+    except Exception as e:
+        return HTMLResponse(f"Invalid JSON: {e}", status_code=400)
+
+    return templates.TemplateResponse("admin_questions_preview.html", {
+        "request": request,
+        "role": role,
+        "questions": payload,
+    })

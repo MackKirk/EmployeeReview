@@ -118,6 +118,9 @@ async def admin_send_review_link(request: Request, employee_id: str):
         return HTMLResponse("Access denied", status_code=403)
 
     base_url = os.getenv("APP_BASE_URL", "http://localhost:8000")
+    if not (base_url.startswith("http://") or base_url.startswith("https://")):
+        base_url = "https://" + base_url
+    base_url = base_url.rstrip("/")
     db: Session = SessionLocal()
     try:
         emp = db.query(Employee).filter_by(id=employee_id).first()
@@ -158,6 +161,9 @@ async def admin_send_review_links(request: Request, role: str = Form(None)):
         return HTMLResponse("Access denied", status_code=403)
 
     base_url = os.getenv("APP_BASE_URL", "http://localhost:8000")
+    if not (base_url.startswith("http://") or base_url.startswith("https://")):
+        base_url = "https://" + base_url
+    base_url = base_url.rstrip("/")
     db: Session = SessionLocal()
     try:
         q = db.query(Employee)
