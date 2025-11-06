@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Preview UI{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow space-y-6">
+  <h1 class="text-2xl font-bold text-gray-800">UI Preview</h1>
+  <p class="text-sm text-gray-600">This page shows how your custom UI snippets will render.</p>
+
+  <h2 class="text-xl font-semibold mt-4">Instructions modal content</h2>
+  <div class="border border-gray-200 rounded p-4">
+    {{ instructions_html | safe }}
+    <div class="text-right mt-3">
+      <button class="bg-blue-600 text-white px-4 py-2 rounded">I Understand and Agree</button>
+    </div>
+  </div>
+
+  <h2 class="text-xl font-semibold mt-6">Rating panel content</h2>
+  <div class="border border-gray-200 rounded p-4">
+    <div id="preview-rating" style="position:relative;">
+      <div style="position:relative; width:320px;">
+        {{ rating_panel_html | safe }}
+      </div>
+    </div>
+    <p class="text-xs text-gray-500 mt-2">Note: In the actual app this panel is fixed to the top-right of the screen.</p>
+  </div>
+</div>
+{% endblock %}
+
+

@@ -304,6 +304,42 @@ async def admin_ui_editor(request: Request):
                 instructions_html = data.get("instructions_html") or ""
         except Exception:
             pass
+    # Prefill defaults for convenience if nothing saved yet
+    if not rating_html:
+        rating_html = """
+<div style="padding:12px 16px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; justify-content:space-between;">
+  <div style="font-weight:700; color:#1f2937;">Rating Scale</div>
+</div>
+<div style="padding:12px 16px;">
+  <table style="width:100%; border-collapse:collapse; font-size:13px; color:#374151;">
+    <thead>
+      <tr>
+        <th style="text-align:left; padding:6px 4px; border-bottom:1px solid #e5e7eb; color:#6b7280;">Score</th>
+        <th style="text-align:left; padding:6px 4px; border-bottom:1px solid #e5e7eb; color:#6b7280;">Meaning</th>
+        <th style="text-align:left; padding:6px 4px; border-bottom:1px solid #e5e7eb; color:#6b7280;">Example</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td style="padding:6px 4px;">5</td><td style="padding:6px 4px;">Outstanding</td><td style="padding:6px 4px;">Goes above and beyond every day</td></tr>
+      <tr><td style="padding:6px 4px;">4</td><td style="padding:6px 4px;">Above Average</td><td style="padding:6px 4px;">Often exceeds expectations</td></tr>
+      <tr><td style="padding:6px 4px;">3</td><td style="padding:6px 4px;">Meets Expectations</td><td style="padding:6px 4px;">Reliable and consistent</td></tr>
+      <tr><td style="padding:6px 4px;">2</td><td style="padding:6px 4px;">Needs Improvement</td><td style="padding:6px 4px;">Requires closer supervision</td></tr>
+      <tr><td style="padding:6px 4px;">1</td><td style="padding:6px 4px;">Not Meeting Standards</td><td style="padding:6px 4px;">Unsafe or unprofessional conduct</td></tr>
+    </tbody>
+  </table>
+</div>
+""".strip()
+    if not instructions_html:
+        instructions_html = """
+<h2 class="text-2xl font-bold text-gray-800">Before you begin</h2>
+<p class="text-gray-700">Please read these instructions carefully before starting your self‑review:</p>
+<ul class="list-disc pl-6 text-gray-700 space-y-1">
+  <li>This review is about your performance and growth.</li>
+  <li>Complete it in one sitting. Unsaved answers will be lost if you leave the page.</li>
+  <li>Be honest and specific. Your input helps guide development and feedback.</li>
+  <li>Use the rating scale on the right as a reference for each score.</li>
+</ul>
+""".strip()
     return templates.TemplateResponse("admin_ui.html", {
         "request": request,
         "rating_panel_html": rating_html,
@@ -339,6 +375,18 @@ async def admin_ui_save(request: Request, rating_panel_html: str = Form(""), ins
         pass
     from fastapi.responses import RedirectResponse
     return RedirectResponse("/admin/ui?message=Saved", status_code=302)
+
+@router.post("/admin/ui/preview", response_class=HTMLResponse)
+async def admin_ui_preview(request: Request, rating_panel_html: str = Form(""), instructions_html: str = Form("")):
+    current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
+        return HTMLResponse("Access restricted", status_code=403)
+    return templates.TemplateResponse("admin_ui_preview.html", {
+        "request": request,
+        "rating_panel_html": rating_panel_html,
+        "instructions_html": instructions_html,
+    })
 
 @router.post("/admin/questions/preview", response_class=HTMLResponse)
 async def admin_questions_preview(request: Request, role: str = Form("employee"), json_text: str = Form("", alias="json")):
