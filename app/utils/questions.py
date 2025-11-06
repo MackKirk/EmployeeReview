@@ -68,21 +68,76 @@ employee_questions = [
   {"id": 49, "question": "Any additional comments or suggestions?", "type": "text", "category": "REFLECTION & PLANNING"}
 ]
 
-# Administration self-review questions (example set; adjust as needed)
+# Administration (Manager) Questions
 administration_questions = [
-  {"id": 101, "question": "Team goal setting and alignment", "type": "scale", "category": "Leadership"},
-  {"id": 102, "question": "Coaching and feedback quality", "type": "scale", "category": "Leadership"},
-  {"id": 103, "question": "Delegation and empowerment", "type": "scale", "category": "Leadership"},
-  {"id": 104, "question": "Cross-team communication", "type": "scale", "category": "Collaboration"},
-  {"id": 105, "question": "Project delivery predictability", "type": "scale", "category": "Execution"},
-  {"id": 106, "question": "Risk identification and mitigation", "type": "scale", "category": "Execution"},
-  {"id": 107, "question": "Hiring and talent development", "type": "scale", "category": "People"},
-  {"id": 108, "question": "Performance management", "type": "scale", "category": "People"},
-  {"id": 109, "question": "Stakeholder satisfaction", "type": "scale", "category": "Impact"},
-  {"id": 110, "question": "Budget awareness and resource use", "type": "scale", "category": "Impact"},
-  {"id": 111, "question": "Major impact this cycle", "type": "text", "category": "Reflection & Planning"},
-  {"id": 112, "question": "Top 1-2 improvements to focus on", "type": "text", "category": "Reflection & Planning"}
+  # PROFESSIONALISM
+  {"id": 101, "question": "Display of appropriate attitude and actions", "type": "scale", "category": "PROFESSIONALISM", "category_description": "Demonstrates professionalism through attitude, attire, organization, and skill development"},
+  {"id": 102, "question": "Proper work attire for the position", "type": "scale", "category": "PROFESSIONALISM"},
+  {"id": 103, "question": "Maintenance of own work area", "type": "scale", "category": "PROFESSIONALISM"},
+  {"id": 104, "question": "Commitment to learning and professional growth", "type": "scale", "category": "PROFESSIONALISM"},
+  {"id": 105, "question": "Skill level that inspires respect and confidence", "type": "scale", "category": "PROFESSIONALISM"},
+
+  # DEPENDABILITY
+  {"id": 106, "question": "Follows through on assignments and instructions reliably and timely", "type": "scale", "category": "DEPENDABILITY", "category_description": "Shows consistency, reliability, and respect for company procedures"},
+  {"id": 107, "question": "Overall attendance and adherence to work schedules and office hours", "type": "scale", "category": "DEPENDABILITY"},
+  {"id": 108, "question": "Mindfulness and compliance with company safety rules and protocols", "type": "scale", "category": "DEPENDABILITY"},
+  {"id": 109, "question": "Follows all company policies", "type": "scale", "category": "DEPENDABILITY"},
+
+  # JUDGEMENT / DECISION MAKING
+  {"id": 110, "question": "Thinks logically and practically before making decisions", "type": "scale", "category": "JUDGEMENT / DECISION MAKING", "category_description": "Applies critical thinking and discretion in decision-making"},
+  {"id": 111, "question": "Uses independent thought and reasoning", "type": "scale", "category": "JUDGEMENT / DECISION MAKING"},
+  {"id": 112, "question": "Implements workable solutions in a timely manner", "type": "scale", "category": "JUDGEMENT / DECISION MAKING"},
+  {"id": 113, "question": "Handles confidential information appropriately", "type": "scale", "category": "JUDGEMENT / DECISION MAKING"},
+
+  # QUALITY OF WORK / INITIATIVE
+  {"id": 114, "question": "Accuracy and value of work produced", "type": "scale", "category": "QUALITY OF WORK / INITIATIVE", "category_description": "Produces high-quality results, demonstrates initiative, and manages time effectively"},
+  {"id": 115, "question": "Ability to work under pressure and learn from mistakes", "type": "scale", "category": "QUALITY OF WORK / INITIATIVE"},
+  {"id": 116, "question": "Willingness to contribute with little direction", "type": "scale", "category": "QUALITY OF WORK / INITIATIVE"},
+  {"id": 117, "question": "Energy, enthusiasm, and ingenuity", "type": "scale", "category": "QUALITY OF WORK / INITIATIVE"},
+  {"id": 118, "question": "Good use of time and respect for others' time", "type": "scale", "category": "QUALITY OF WORK / INITIATIVE"},
+
+  # TEAMWORK
+  {"id": 119, "question": "Contributes to a climate of strong morale and team spirit", "type": "scale", "category": "TEAMWORK", "category_description": "Encourages collaboration, participation, and team cohesion"},
+  {"id": 120, "question": "Participates in team building meetings and events", "type": "scale", "category": "TEAMWORK"},
+  {"id": 121, "question": "Celebrates team wins and successes", "type": "scale", "category": "TEAMWORK"},
+  {"id": 122, "question": "Defines success in terms of the whole team", "type": "scale", "category": "TEAMWORK"},
+  {"id": 123, "question": "Fosters a sense of belonging within the team", "type": "scale", "category": "TEAMWORK"},
+  {"id": 124, "question": "Demonstrates tolerance and patience with people and processes", "type": "scale", "category": "TEAMWORK"},
+
+  # CUSTOMER FOCUS
+  {"id": 125, "question": "Dedicated to exceeding expectations of internal and external customers", "type": "scale", "category": "CUSTOMER FOCUS", "category_description": "Builds strong customer relationships and focuses on satisfaction"},
+  {"id": 126, "question": "Establishes and maintains effective relationships with customers and consultants", "type": "scale", "category": "CUSTOMER FOCUS"},
+  {"id": 127, "question": "Capable of gaining trust and respect", "type": "scale", "category": "CUSTOMER FOCUS"},
+
+  # CONFLICT MANAGEMENT
+  {"id": 128, "question": "Steps up to conflicts when necessary", "type": "scale", "category": "CONFLICT MANAGEMENT", "category_description": "Resolves disputes effectively with fairness and empathy"},
+  {"id": 129, "question": "Reads situations quickly and knows when to interject or intervene", "type": "scale", "category": "CONFLICT MANAGEMENT"},
+  {"id": 130, "question": "Demonstrates good listening skills", "type": "scale", "category": "CONFLICT MANAGEMENT"},
+  {"id": 131, "question": "Finds common ground and gains cooperation for dispute resolution", "type": "scale", "category": "CONFLICT MANAGEMENT"},
+
+  # INTERPERSONAL SKILLS / RESPECT
+  {"id": 132, "question": "Expresses ideas clearly and effectively, orally and in writing", "type": "scale", "category": "INTERPERSONAL SKILLS / RESPECT", "category_description": "Builds strong working relationships with respect and accountability"},
+  {"id": 133, "question": "Works with others in an assertive and effective manner", "type": "scale", "category": "INTERPERSONAL SKILLS / RESPECT"},
+  {"id": 134, "question": "Treats others respectfully", "type": "scale", "category": "INTERPERSONAL SKILLS / RESPECT"},
+  {"id": 135, "question": "Shows accountability for actions", "type": "scale", "category": "INTERPERSONAL SKILLS / RESPECT"},
+
+  # PROJECT / PRODUCTION ADMINISTRATION
+  {"id": 136, "question": "Approves costs in a timely manner", "type": "scale", "category": "PROJECT / PRODUCTION ADMINISTRATION", "category_description": "Effectively manages project timelines, documentation, and profitability"},
+  {"id": 137, "question": "Processes invoicing in a timely manner", "type": "scale", "category": "PROJECT / PRODUCTION ADMINISTRATION"},
+  {"id": 138, "question": "Ensures proper follow-up and change order communication", "type": "scale", "category": "PROJECT / PRODUCTION ADMINISTRATION"},
+  {"id": 139, "question": "Maintains organized project management files", "type": "scale", "category": "PROJECT / PRODUCTION ADMINISTRATION"},
+  {"id": 140, "question": "Completes projects in a timely manner", "type": "scale", "category": "PROJECT / PRODUCTION ADMINISTRATION"},
+  {"id": 141, "question": "Ensures project completion with profitability", "type": "scale", "category": "PROJECT / PRODUCTION ADMINISTRATION"},
+
+  # REFLECTION & PLANNING
+  {"id": 142, "question": "List some responsibilities in your job duties", "type": "text", "category": "REFLECTION & PLANNING", "category_description": "Encourages reflection on performance, goals, and improvement areas"},
+  {"id": 143, "question": "Describe your accomplishments in the last year (what were you most proud of?)", "type": "text", "category": "REFLECTION & PLANNING"},
+  {"id": 144, "question": "What could the company do differently to help you better perform your job?", "type": "text", "category": "REFLECTION & PLANNING"},
+  {"id": 145, "question": "What are the areas in which you most need to improve?", "type": "text", "category": "REFLECTION & PLANNING"},
+  {"id": 146, "question": "What other comments or suggestions should be included in this review?", "type": "text", "category": "REFLECTION & PLANNING"},
+  {"id": 147, "question": "List some professional goals you have for the next review period", "type": "text", "category": "REFLECTION & PLANNING"}
 ]
+
 
 # Supervisor self-review questions (example set; adjust as needed)
 supervisor_questions = [

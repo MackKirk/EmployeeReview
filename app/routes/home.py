@@ -6,7 +6,7 @@ from app.db import SessionLocal
 from app.models import Employee, Review, EmailEvent
 from app.utils.auth_utils import get_current_user
 from app.utils.auth_utils import generate_magic_login_token
-from app.utils.email import send_email, build_review_invite_email
+from app.utils.email import send_email, build_review_invite_email, send_email_verbose
 from app.utils.seed import seed_employees_from_csv
 import os
 
@@ -108,6 +108,33 @@ async def seed_setup_submit(request: Request, password: str = Form("")):
         )
     finally:
         db.close()
+
+
+@router.post("/admin/send-test-email")
+async def admin_send_test_email(request: Request, to: str = Form("")):
+    user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((user and user.role == "director") or is_admin):
+        return HTMLResponse("Access denied", status_code=403)
+
+    if not to:
+        return HTMLResponse("Please provide 'to' email", status_code=400)
+
+    base_url = os.getenv("APP_BASE_URL", "http://localhost:8000")
+    if not (base_url.startswith("http://") or base_url.startswith("https://")):
+        base_url = "https://" + base_url
+    base_url = base_url.rstrip("/")
+
+    subject = "EmployeeReview SMTP test"
+    html = (
+        f"<p>This is a test email from EmployeeReview.</p>"
+        f"<p>Base URL: {base_url}</p>"
+    )
+    ok, err = send_email_verbose(to, subject, html)
+    from fastapi.responses import RedirectResponse
+    if ok:
+        return RedirectResponse(f"/admin?message=Test%20email%20sent%20to%20{to}", status_code=302)
+    return RedirectResponse(f"/admin?error=SMTP%20failed:%20{(err or '').replace(' ', '%20')}", status_code=302)
 
 
 @router.post("/admin/send-review-link/{employee_id}")

@@ -49,6 +49,13 @@
         </label>
       </div>
 
+      {% if q.category == "COMPANY VEHICLE AND MACHINERY" and q.type == "yesno" %}
+      <textarea name="c{{ q.id }}" rows="2"
+                class="w-full border border-gray-300 p-2 rounded mt-2 resize-none"
+                placeholder="Comment (optional)"
+                {% if readonly %}disabled{% endif %}>{{ comment_map.get(q.question, '') }}</textarea>
+      {% endif %}
+
       {% elif q.type == "text" %}
       <textarea name="q{{ q.id }}" rows="4"
                 class="w-full border border-gray-300 p-2 rounded resize-none"

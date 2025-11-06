@@ -122,3 +122,44 @@ def build_review_invite_email(employee_name: str, link: str, base_url: str, supe
         return False
 
 
+def send_email_verbose(to_email: str, subject: str, html_body: str):
+    """Send email and return (ok: bool, error: str | None)."""
+    host = os.getenv("SMTP_HOST")
+    port = int(os.getenv("SMTP_PORT", "587"))
+    user = os.getenv("SMTP_USER")
+    password = os.getenv("SMTP_PASSWORD")
+    from_email = os.getenv("SMTP_FROM", user or "noreply@example.com")
+    use_tls = os.getenv("SMTP_USE_TLS", "1") == "1"
+    use_ssl = os.getenv("SMTP_USE_SSL", "0") == "1" or port == 465
+    login_disabled = os.getenv("SMTP_LOGIN_DISABLED", "0") == "1"
+
+    if not host:
+        return False, "Missing SMTP_HOST"
+    if not login_disabled and (not user or not password):
+        return False, "Missing SMTP_USER/SMTP_PASSWORD (or set SMTP_LOGIN_DISABLED=1)"
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = from_email
+    msg["To"] = to_email
+    msg.attach(MIMEText(html_body, "html"))
+
+    try:
+        if use_ssl:
+            context = ssl.create_default_context()
+            with smtplib.SMTP_SSL(host, port, context=context) as server:
+                if not login_disabled:
+                    server.login(user, password)
+                server.sendmail(from_email, [to_email], msg.as_string())
+        else:
+            with smtplib.SMTP(host, port) as server:
+                if use_tls:
+                    server.starttls(context=ssl.create_default_context())
+                if not login_disabled:
+                    server.login(user, password)
+                server.sendmail(from_email, [to_email], msg.as_string())
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+

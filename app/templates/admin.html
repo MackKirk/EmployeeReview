@@ -6,20 +6,33 @@
   <h1 class="text-3xl font-bold text-gray-800">Administration</h1>
 
   <div class="flex items-center justify-between">
-    <p class="text-gray-600">Send review emails by role:</p>
+    <a href="/admin/questions" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200">Edit Questions</a>
+  </div>
+
+  <div class="mt-4 border border-red-300 bg-red-50 rounded-lg p-4">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="text-red-700 font-semibold">Danger zone</h2>
+      <span class="text-red-600 text-sm">Bulk email actions</span>
+    </div>
     <div class="space-x-2">
-      <a href="/admin/questions" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200">Edit Questions</a>
-      <form method="post" action="/admin/send-review-links" class="inline">
+      <form method="post" action="/admin/send-review-links" class="inline" data-confirm>
         <input type="hidden" name="role" value="employee">
         <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Send to Employees</button>
       </form>
-      <form method="post" action="/admin/send-review-links" class="inline">
+      <form method="post" action="/admin/send-review-links" class="inline" data-confirm>
         <input type="hidden" name="role" value="supervisor">
         <button class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Send to Supervisors</button>
       </form>
-      <form method="post" action="/admin/send-review-links" class="inline">
+      <form method="post" action="/admin/send-review-links" class="inline" data-confirm>
         <input type="hidden" name="role" value="administration">
         <button class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">Send to Administration</button>
+      </form>
+      <form method="post" action="/admin/send-review-links" class="inline" data-confirm>
+        <button class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Send to All</button>
+      </form>
+      <form method="post" action="/admin/send-test-email" class="inline" onsubmit="return confirm('Send a test email?');">
+        <input type="email" name="to" placeholder="test@example.com" class="border rounded px-3 py-2" required>
+        <button class="bg-gray-800 text-white px-4 py-2 rounded hover:bg-black">Send test email</button>
       </form>
     </div>
   </div>
@@ -150,6 +163,16 @@
       if (search) {
         search.addEventListener('input', applyFilter);
       }
+
+      // Confirm bulk sends
+      document.querySelectorAll('form[data-confirm]').forEach(function(f){
+        f.addEventListener('submit', function(e){
+          var ok = confirm('⚠️ Are you sure you want to send these emails?');
+          if (!ok) {
+            e.preventDefault();
+          }
+        });
+      });
     })();
   </script>
 </div>

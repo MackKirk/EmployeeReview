@@ -106,7 +106,7 @@ async def submit_supervisor_review(request: Request, employee_id: str):
         return HTMLResponse("Employee not found", status_code=404)
     if (
         not current_user
-        or current_user.email != employee.supervisor_email
+        or current_user.name != employee.supervisor_email
         or not (
             current_user.role == "supervisor"
             or (current_user.role == "director" and current_user.is_supervisor)
@@ -120,7 +120,11 @@ async def submit_supervisor_review(request: Request, employee_id: str):
 
     for q in questions:
         value = form.get(f"q{q['id']}")
-        comment = form.get(f"c{q['id']}") if q["type"] == "scale" else None
+        comment = None
+        if q["type"] == "scale":
+            comment = form.get(f"c{q['id']}")
+        elif q["type"] == "yesno" and q.get("category") == "COMPANY VEHICLE AND MACHINERY":
+            comment = form.get(f"c{q['id']}")
         if q["type"] == "scale":
             value = int(value) if value else None
         elif q["type"] == "yesno":
