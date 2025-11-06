@@ -202,7 +202,8 @@ async def admin_open_review(request: Request, employee_id: str):
         emp = db.query(Employee).filter_by(id=employee_id).first()
         if not emp:
             return HTMLResponse("Employee not found", status_code=404)
-        token = generate_magic_login_token(str(emp.id), redirect_url=f"/employee/{emp.id}", role=emp.role)
+        # Redirect to home after logging in as the selected user (for testing session as that user)
+        token = generate_magic_login_token(str(emp.id), redirect_url="/home", role=emp.role)
         link = f"{base_url}/magic-login?token={token}"
         from fastapi.responses import RedirectResponse
         return RedirectResponse(link, status_code=302)
