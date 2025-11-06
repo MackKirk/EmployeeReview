@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.db import SessionLocal
 from app.models import Employee, Review
 from app.utils.questions import questions
+from app.utils.ui_overrides import get_rating_panel_html
 from app.utils.auth_utils import get_current_user
 import uuid
 from datetime import datetime
@@ -86,6 +87,7 @@ async def supervisor_review(request: Request, employee_id: str):
     comment_map = {a["question"]: a.get("comment") for a in existing} if existing else {}
     readonly = bool(existing)
     db.close()
+    rating_panel_html = get_rating_panel_html()
     return templates.TemplateResponse("supervisor_review.html", {
         "request": request,
         "employee": employee,
@@ -93,6 +95,7 @@ async def supervisor_review(request: Request, employee_id: str):
         "existing_map": existing_map,
         "readonly": readonly,
         "comment_map": comment_map,
+        "rating_panel_html": rating_panel_html,
     })
 
 

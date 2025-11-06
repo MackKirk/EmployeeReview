@@ -166,9 +166,10 @@ async def admin_send_review_link(request: Request, employee_id: str):
             sup_link = f"{base_url}/magic-login?token={sup_token}"
         subject = "Employee Review Notice"
         html = build_review_invite_email(emp.name, link, base_url, supervisor_link=sup_link)
-        ok = send_email(emp.email, subject, html)
+        ok, err = send_email_verbose(emp.email, subject, html)
+        from fastapi.responses import RedirectResponse
         if not ok:
-            return HTMLResponse("Failed to send email (SMTP not configured?)", status_code=500)
+            return RedirectResponse(f"/admin?error=SMTP%20failed:%20{(err or '').replace(' ', '%20')}", status_code=302)
         try:
             evt = EmailEvent(employee_id=emp.id, event_type="sent")
             db.add(evt)
@@ -176,7 +177,7 @@ async def admin_send_review_link(request: Request, employee_id: str):
         except Exception:
             db.rollback()
         # Redirect back to admin page with a flash-like message via querystring
-        return RedirectResponse("/admin", status_code=302)
+        return RedirectResponse("/admin?message=Email%20sent%20to%20{emp.name}", status_code=302)
     finally:
         db.close()
 

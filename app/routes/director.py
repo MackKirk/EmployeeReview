@@ -9,6 +9,7 @@ from app.utils.questions import questions
 from app.utils.auth_utils import generate_magic_login_token
 import os
 import json
+from app.utils.ui_overrides import get_rating_panel_html
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -34,6 +35,7 @@ async def director_view_review(request: Request, employee_id: str):
     comment_map = {c["question"]: c.get("comment") for c in existing}
 
     allow_comments = bool(current_user and current_user.role == "director")
+    rating_panel_html = get_rating_panel_html()
     return templates.TemplateResponse(
         "director_review.html",
         {
@@ -42,6 +44,7 @@ async def director_view_review(request: Request, employee_id: str):
             "review": review,
             "questions": questions,
             "comment_map": comment_map,
+            "rating_panel_html": rating_panel_html,
             "allow_comments": allow_comments,
         },
     )
@@ -284,6 +287,58 @@ async def admin_questions_save(request: Request, role: str = Form("employee"), j
     from fastapi.responses import RedirectResponse
     return RedirectResponse(f"/admin/questions?role={role}&message=Saved", status_code=302)
 
+@router.get("/admin/ui", response_class=HTMLResponse)
+async def admin_ui_editor(request: Request):
+    current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
+        return HTMLResponse("Access restricted", status_code=403)
+    path = os.path.join("app", "data", "ui_overrides.json")
+    rating_html = ""
+    instructions_html = ""
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f) or {}
+                rating_html = data.get("rating_panel_html") or ""
+                instructions_html = data.get("instructions_html") or ""
+        except Exception:
+            pass
+    return templates.TemplateResponse("admin_ui.html", {
+        "request": request,
+        "rating_panel_html": rating_html,
+        "instructions_html": instructions_html,
+        "message": request.query_params.get("message"),
+        "error": request.query_params.get("error"),
+    })
+
+@router.post("/admin/ui", response_class=HTMLResponse)
+async def admin_ui_save(request: Request, rating_panel_html: str = Form(""), instructions_html: str = Form("")):
+    current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
+        return HTMLResponse("Access restricted", status_code=403)
+    path = os.path.join("app", "data", "ui_overrides.json")
+    try:
+        existing = {}
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                existing = json.load(f) or {}
+        existing["rating_panel_html"] = rating_panel_html
+        existing["instructions_html"] = instructions_html
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(existing, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(f"/admin/ui?error=Save%20failed:%20{str(e).replace(' ', '%20')}", status_code=302)
+    # Clear cached overrides
+    try:
+        from app.utils import ui_overrides as ui_mod
+        ui_mod._cache = None  # type: ignore
+    except Exception:
+        pass
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse("/admin/ui?message=Saved", status_code=302)
 
 @router.post("/admin/questions/preview", response_class=HTMLResponse)
 async def admin_questions_preview(request: Request, role: str = Form("employee"), json_text: str = Form("", alias="json")):

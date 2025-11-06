@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.db import SessionLocal
 from app.models import Employee, Review
 from app.utils.questions import get_questions_for_role
+from app.utils.ui_overrides import get_rating_panel_html, get_instructions_html
 from app.utils.auth_utils import get_current_user
 import uuid
 from datetime import datetime
@@ -30,12 +31,16 @@ async def employee_review(request: Request, employee_id: str):
     if not employee:
         return HTMLResponse("Employee not found", status_code=404)
     selected_questions = get_questions_for_role(employee.role)
+    rating_panel_html = get_rating_panel_html()
+    instructions_html = get_instructions_html()
     return templates.TemplateResponse("employee_review.html", {
         "request": request,
         "employee": employee,
         "questions": selected_questions,
         "existing_map": existing_map,
         "readonly": readonly,
+        "rating_panel_html": rating_panel_html,
+        "instructions_html": instructions_html,
     })
 
 
