@@ -6,6 +6,8 @@ from app.db import SessionLocal
 from app.models import Employee, Review, EmailEvent
 from app.utils.auth_utils import get_current_user
 from app.utils.questions import questions
+from app.utils.auth_utils import generate_magic_login_token
+import os
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -182,5 +184,26 @@ async def admin_update_employee(request: Request, employee_id: str, role: str = 
 
         from fastapi.responses import RedirectResponse
         return RedirectResponse("/admin?message=Employee%20updated", status_code=302)
+    finally:
+        db.close()
+
+
+@router.get("/admin/open-review/{employee_id}")
+async def admin_open_review(request: Request, employee_id: str):
+    current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
+        return HTMLResponse("Access restricted", status_code=403)
+
+    base_url = os.getenv("APP_BASE_URL", "http://localhost:8000")
+    db: Session = SessionLocal()
+    try:
+        emp = db.query(Employee).filter_by(id=employee_id).first()
+        if not emp:
+            return HTMLResponse("Employee not found", status_code=404)
+        token = generate_magic_login_token(str(emp.id), redirect_url=f"/employee/{emp.id}", role=emp.role)
+        link = f"{base_url}/magic-login?token={token}"
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(link, status_code=302)
     finally:
         db.close()

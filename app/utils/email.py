@@ -23,9 +23,24 @@ def send_email(to_email: str, subject: str, html_body: str) -> bool:
         return False
 
 
-def build_review_invite_email(employee_name: str, link: str, base_url: str) -> str:
+def build_review_invite_email(employee_name: str, link: str, base_url: str, supervisor_link: str = None) -> str:
     logo_url = f"{base_url.rstrip('/')}/static/logo.png"
     days = int(os.getenv('MAGIC_LINK_MAX_AGE_SECONDS', '604800')) // 86400
+    extra_supervisor = (
+        f"""
+            <tr>
+              <td style=\"padding:0 24px 12px 24px;color:#374151;font-size:14px;line-height:1.6;\">
+                <p style=\"margin:0 0 8px 0;\"><strong>Are you a supervisor?</strong> You can also review your team using the link below:</p>
+              </td>
+            </tr>
+            <tr>
+              <td align=\"center\" style=\"padding:0 24px 20px 24px;\">
+                <a href=\"{supervisor_link}\" style=\"background:#16a34a;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:8px;display:inline-block;font-weight:600;\">Open supervisor dashboard</a>
+              </td>
+            </tr>
+        """
+    ) if supervisor_link else ""
+
     return (
         f"""
 <!DOCTYPE html>
@@ -66,6 +81,7 @@ def build_review_invite_email(employee_name: str, link: str, base_url: str) -> s
                 <div style="color:#9ca3af;font-size:12px;margin-top:8px;">This secure link expires in {days} days.</div>
               </td>
             </tr>
+            {extra_supervisor}
             <tr>
               <td style="padding:0 24px 20px 24px;color:#374151;font-size:14px;line-height:1.6;">
                 <p style="margin:0;">Thank you,<br>Mack Kirk Roofing Leadership Team</p>

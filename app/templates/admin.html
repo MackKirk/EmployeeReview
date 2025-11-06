@@ -50,15 +50,17 @@
         <tr class="hover:bg-gray-50">
           <td class="p-3 font-medium">{{ row.employee.name }}</td>
           <td class="p-3">
-            <form method="post" action="/admin/update-employee/{{ row.employee.id }}" class="flex items-center space-x-2">
-              <select name="role" class="border rounded px-2 py-1">
+            <form method="post" action="/admin/update-employee/{{ row.employee.id }}" class="flex items-center space-x-2" data-emp-id="{{ row.employee.id }}">
+              <span class="role-display" data-emp-id="{{ row.employee.id }}">{{ row.employee.role }}</span>
+              <select name="role" class="border rounded px-2 py-1" style="display:none;" disabled data-role-select data-emp-id="{{ row.employee.id }}">
                 {% for r in allowed_roles %}
                   <option value="{{ r }}" {% if row.employee.role == r %}selected{% endif %}>{{ r }}</option>
                 {% endfor %}
               </select>
           </td>
           <td class="p-3">
-              <select name="supervisor_name" class="border rounded px-2 py-1 w-56">
+              <span class="sup-display" data-emp-id="{{ row.employee.id }}">{{ row.employee.supervisor_email or '—' }}</span>
+              <select name="supervisor_name" class="border rounded px-2 py-1 w-56" style="display:none;" disabled data-sup-select data-emp-id="{{ row.employee.id }}">
                 <option value="">None</option>
                 {% for n in names %}
                   <option value="{{ n }}" {% if row.employee.supervisor_email == n %}selected{% endif %}>{{ n }}</option>
@@ -71,12 +73,14 @@
           <td class="p-3 text-center">{% if row.has_sent %}📧{% else %}—{% endif %}</td>
           <td class="p-3 text-center">{% if row.has_clicked %}🟢{% else %}—{% endif %}</td>
           <td class="p-3 text-center">
-              <button class="mr-3 bg-gray-100 px-3 py-1 rounded hover:bg-gray-200">Save</button>
+              <button type="button" class="edit-row text-gray-700 hover:text-black" title="Edit" data-emp-id="{{ row.employee.id }}">✏️</button>
+              <button type="submit" class="save-row ml-2 bg-gray-100 px-2 py-1 rounded hover:bg-gray-200" style="display:none;" title="Save" data-emp-id="{{ row.employee.id }}">💾</button>
             </form>
             <form method="post" action="/admin/send-review-link/{{ row.employee.id }}" class="inline">
-              <button class="text-blue-600 font-semibold hover:underline">Send email</button>
+              <button class="ml-2" title="Send email">✉️</button>
             </form>
-            <a href="/director/review/{{ row.employee.id }}" class="ml-3 text-gray-700 hover:underline">View compare</a>
+            <a href="/director/review/{{ row.employee.id }}" class="ml-3 text-gray-700 hover:underline" title="View compare">👁️</a>
+            <a href="/admin/open-review/{{ row.employee.id }}" class="ml-3 text-gray-700 hover:underline" title="Open as user" target="_blank">🔗</a>
           </td>
         </tr>
         {% endfor %}
@@ -84,6 +88,49 @@
     </table>
     
   </div>
+  <script>
+    (function() {
+      function toggleEdit(empId, editing) {
+        var roleDisp = document.querySelector('.role-display[data-emp-id="' + empId + '"]');
+        var roleSel = document.querySelector('select[data-role-select][data-emp-id="' + empId + '"]');
+        var supDisp = document.querySelector('.sup-display[data-emp-id="' + empId + '"]');
+        var supSel = document.querySelector('select[data-sup-select][data-emp-id="' + empId + '"]');
+        var saveBtn = document.querySelector('button.save-row[data-emp-id="' + empId + '"]');
+        var editBtn = document.querySelector('button.edit-row[data-emp-id="' + empId + '"]');
+        if (!roleDisp || !roleSel || !supDisp || !supSel || !saveBtn || !editBtn) return;
+        if (editing) {
+          roleDisp.style.display = 'none';
+          supDisp.style.display = 'none';
+          roleSel.style.display = '';
+          supSel.style.display = '';
+          roleSel.disabled = false;
+          supSel.disabled = false;
+          saveBtn.style.display = '';
+          editBtn.style.display = 'none';
+        } else {
+          roleDisp.style.display = '';
+          supDisp.style.display = '';
+          roleSel.style.display = 'none';
+          supSel.style.display = 'none';
+          roleSel.disabled = true;
+          supSel.disabled = true;
+          saveBtn.style.display = 'none';
+          editBtn.style.display = '';
+          // Update display text with current selections
+          var roleText = roleSel.options[roleSel.selectedIndex].textContent;
+          roleDisp.textContent = roleText;
+          var supText = supSel.options[supSel.selectedIndex] ? supSel.options[supSel.selectedIndex].textContent : '—';
+          supDisp.textContent = supText || '—';
+        }
+      }
+      document.querySelectorAll('button.edit-row').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var id = btn.getAttribute('data-emp-id');
+          toggleEdit(id, true);
+        });
+      });
+    })();
+  </script>
 </div>
 {% endblock %}
 
