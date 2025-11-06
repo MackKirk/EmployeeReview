@@ -8,6 +8,7 @@
   <div class="flex items-center justify-between">
     <p class="text-gray-600">Send review emails by role:</p>
     <div class="space-x-2">
+      <a href="/admin/questions" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200">Edit Questions</a>
       <form method="post" action="/admin/send-review-links" class="inline">
         <input type="hidden" name="role" value="employee">
         <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Send to Employees</button>
@@ -30,8 +31,12 @@
     <div class="p-3 rounded bg-red-50 text-red-800 border border-red-200">{{ error }}</div>
   {% endif %}
 
+  <div class="flex justify-end mb-3">
+    <input id="admin-search" type="text" placeholder="Search name..." class="border rounded px-3 py-2 w-64" autocomplete="off">
+  </div>
+
   <div class="overflow-x-auto">
-    <table class="w-full table-auto border border-gray-300 rounded-md overflow-hidden">
+    <table id="admin-table" class="w-full table-auto border border-gray-300 rounded-md overflow-hidden">
       <thead class="bg-gray-100 text-gray-700">
         <tr>
           <th class="p-3 text-left">Name</th>
@@ -129,6 +134,22 @@
           toggleEdit(id, true);
         });
       });
+
+      // Name filter
+      var search = document.getElementById('admin-search');
+      var tbody = document.querySelector('#admin-table tbody');
+      function applyFilter() {
+        var q = (search.value || '').toLowerCase().trim();
+        if (!tbody) return;
+        tbody.querySelectorAll('tr').forEach(function(row){
+          var nameCell = row.querySelector('td');
+          var name = nameCell ? (nameCell.textContent || '').toLowerCase() : '';
+          row.style.display = !q || name.indexOf(q) !== -1 ? '' : 'none';
+        });
+      }
+      if (search) {
+        search.addEventListener('input', applyFilter);
+      }
     })();
   </script>
 </div>

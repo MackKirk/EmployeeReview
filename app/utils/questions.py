@@ -1,3 +1,6 @@
+import os
+import json
+
 employee_questions = [
   # WORK STANDARDS
   {"id": 1,  "question": "Quality of work", "type": "scale", "category": "WORK STANDARDS", "category_description": "How effectivly does this person produce high caliber work compared with the acceptance standards of performance"},
@@ -149,16 +152,35 @@ supervisor_questions = [
 
 ]
 
+_overrides = None
+
+def _load_overrides():
+  global _overrides
+  if _overrides is not None:
+    return _overrides
+  path = os.path.join("app", "data", "questions_overrides.json")
+  if os.path.exists(path):
+    try:
+      with open(path, "r", encoding="utf-8") as f:
+        _overrides = json.load(f)
+    except Exception:
+      _overrides = {}
+  else:
+    _overrides = {}
+  return _overrides
+
+
 def get_questions_for_role(role: str):
   r = (role or "").lower().strip()
+  overrides = _load_overrides()
   if r in ("administration", "admin"):
-    return administration_questions
+    return overrides.get("administration") or administration_questions
   # Backward-compat: treat legacy 'manager' as 'administration'
   if r == "manager":
-    return administration_questions
+    return overrides.get("administration") or administration_questions
   if r == "supervisor":
-    return supervisor_questions
-  return employee_questions
+    return overrides.get("supervisor") or supervisor_questions
+  return overrides.get("employee") or employee_questions
 
 # Backward compatibility: keep the original name used elsewhere
 questions = employee_questions

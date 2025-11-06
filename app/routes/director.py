@@ -8,6 +8,7 @@ from app.utils.auth_utils import get_current_user
 from app.utils.questions import questions
 from app.utils.auth_utils import generate_magic_login_token
 import os
+import json
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -207,3 +208,79 @@ async def admin_open_review(request: Request, employee_id: str):
         return RedirectResponse(link, status_code=302)
     finally:
         db.close()
+
+
+@router.get("/admin/questions", response_class=HTMLResponse)
+async def admin_questions_editor(request: Request, role: str = "employee"):
+    current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
+        return HTMLResponse("Access restricted", status_code=403)
+
+    # Load current questions: prefer overrides file, fallback to defaults
+    from app.utils.questions import get_questions_for_role
+    qs = get_questions_for_role(role)
+    json_text = json.dumps(qs, ensure_ascii=False, indent=2)
+    return templates.TemplateResponse("admin_questions.html", {
+        "request": request,
+        "role": role,
+        "json_text": json_text,
+        "message": request.query_params.get("message"),
+        "error": request.query_params.get("error"),
+    })
+
+
+@router.post("/admin/questions", response_class=HTMLResponse)
+async def admin_questions_save(request: Request, role: str = Form("employee"), json: str = Form("")):
+    current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
+        return HTMLResponse("Access restricted", status_code=403)
+
+    role = (role or "").strip().lower()
+    if role not in {"employee", "supervisor", "administration"}:
+        return HTMLResponse("Invalid role", status_code=400)
+
+    try:
+        data = json_module.loads(json) if False else None  # placeholder to keep name unique
+    except Exception:
+        data = None
+    # Proper parse
+    try:
+        payload = json.loads(json)
+        if not isinstance(payload, list):
+            raise ValueError("JSON must be a list of questions")
+        # Basic validation
+        allowed_types = {"scale", "yesno", "text"}
+        for item in payload:
+            if not isinstance(item, dict):
+                raise ValueError("Each question must be an object")
+            if not isinstance(item.get("id"), int):
+                raise ValueError("id must be integer")
+            if item.get("type") not in allowed_types:
+                raise ValueError("type must be one of scale|yesno|text")
+            if not item.get("question") or not item.get("category"):
+                raise ValueError("question and category are required")
+    except Exception as e:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(f"/admin/questions?role={role}&error={str(e).replace(' ', '%20')}", status_code=302)
+
+    # Write overrides file (merge with existing)
+    path = os.path.join("app", "data", "questions_overrides.json")
+    try:
+        existing = {}
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                existing = json.load(f) or {}
+    except Exception:
+        existing = {}
+    existing[role] = payload
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(existing, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(f"/admin/questions?role={role}&error=Save%20failed:%20{str(e).replace(' ', '%20')}", status_code=302)
+
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(f"/admin/questions?role={role}&message=Saved", status_code=302)

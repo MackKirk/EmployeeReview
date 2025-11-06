@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Edit Questions{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto bg-white p-8 rounded-xl shadow space-y-6">
+  <div class="flex items-center justify-between">
+    <h1 class="text-3xl font-bold text-gray-800">Edit Questions</h1>
+    <a href="/admin" class="text-blue-600 hover:underline">← Back to Admin</a>
+  </div>
+
+  {% if message %}
+    <div class="p-3 rounded bg-green-50 text-green-800 border border-green-200">{{ message }}</div>
+  {% endif %}
+  {% if error %}
+    <div class="p-3 rounded bg-red-50 text-red-800 border border-red-200">{{ error }}</div>
+  {% endif %}
+
+  <form method="get" action="/admin/questions" class="flex items-center space-x-3">
+    <label class="font-semibold">Questionnaire:</label>
+    <select name="role" class="border rounded px-3 py-2">
+      <option value="employee" {% if role == 'employee' %}selected{% endif %}>employee</option>
+      <option value="supervisor" {% if role == 'supervisor' %}selected{% endif %}>supervisor</option>
+      <option value="administration" {% if role == 'administration' %}selected{% endif %}>administration</option>
+    </select>
+    <button class="bg-gray-100 px-3 py-2 rounded hover:bg-gray-200">Load</button>
+  </form>
+
+  <p class="text-sm text-gray-600">Edit the JSON below and click Save. Fields: id (int), question (str), type (scale|yesno|text), category (str), optional category_description, controls_group/depends_on_group/depends_on_value for conditional blocks.</p>
+
+  <form method="post" action="/admin/questions" class="space-y-3">
+    <input type="hidden" name="role" value="{{ role }}">
+    <textarea name="json" rows="22" class="w-full border border-gray-300 p-3 rounded" spellcheck="false">{{ json_text }}</textarea>
+    <div class="text-right">
+      <button class="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700">Save</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+
