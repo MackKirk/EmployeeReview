@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.db import SessionLocal
 from app.models import Employee, Review
-from app.utils.questions import questions
+from app.utils.questions import get_questions_for_role
 from app.utils.ui_overrides import get_rating_panel_html
 from app.utils.auth_utils import get_current_user
 import uuid
@@ -107,10 +107,12 @@ async def supervisor_review(request: Request, employee_id: str):
     readonly = bool(existing)
     db.close()
     rating_panel_html = get_rating_panel_html()
+    # Use the employee's role so supervisor reviews the same questionnaire the employee answered
+    selected_questions = get_questions_for_role(employee.role)
     return templates.TemplateResponse("supervisor_review.html", {
         "request": request,
         "employee": employee,
-        "questions": questions,
+        "questions": selected_questions,
         "existing_map": existing_map,
         "readonly": readonly,
         "comment_map": comment_map,
@@ -140,7 +142,9 @@ async def submit_supervisor_review(request: Request, employee_id: str):
     form = await request.form()
     answers = []
 
-    for q in questions:
+    # Use the employee's role so supervisor reviews the same questionnaire the employee answered
+    selected_questions = get_questions_for_role(employee.role)
+    for q in selected_questions:
         value = form.get(f"q{q['id']}")
         comment = None
         if q["type"] == "scale":

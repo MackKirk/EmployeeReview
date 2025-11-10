@@ -34,10 +34,14 @@
           </div>
           <div>
             <span class="font-semibold">Supervisor:</span>
-            {% set ans = review.supervisor_answers[idx] %}
-            {{ ans.value }}
-            {% if ans.comment %}
-              <br><em class="text-gray-500">Comment: {{ ans.comment }}</em>
+            {% set s = supervisor_map.get(q.question) %}
+            {% if s %}
+              {{ s.value }}
+              {% if s.comment %}
+                <br><em class="text-gray-500">Comment: {{ s.comment }}</em>
+              {% endif %}
+            {% else %}
+              —
             {% endif %}
           </div>
         </div>

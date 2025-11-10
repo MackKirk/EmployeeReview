@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.db import SessionLocal
 from app.models import Employee, Review, EmailEvent
 from app.utils.auth_utils import get_current_user
-from app.utils.questions import questions
+from app.utils.questions import questions, get_questions_for_role
 from app.utils.auth_utils import generate_magic_login_token
 import os
 import json
@@ -83,7 +83,9 @@ async def director_view_review(request: Request, employee_id: str):
     # Build category slug map for template inputs
     cats = []
     seen = set()
-    for q in questions:
+    # Use the employee's role so the director compares on the same questionnaire
+    selected_questions = get_questions_for_role(employee.role)
+    for q in selected_questions:
         cat = q.get("category") or ""
         if cat not in seen:
             seen.add(cat)
@@ -92,13 +94,22 @@ async def director_view_review(request: Request, employee_id: str):
         return re.sub(r"[^A-Za-z0-9]+", "_", s).strip("_").lower()
     category_slugs = {c: slug(c) for c in cats}
 
+    # Build supervisor answer map by question text (best-effort)
+    supervisor_map = {}
+    try:
+        sup_answers = review.supervisor_answers or []
+        supervisor_map = {a.get("question"): a for a in sup_answers if isinstance(a, dict)}
+    except Exception:
+        supervisor_map = {}
+
     return templates.TemplateResponse(
         "director_review.html",
         {
             "request": request,
             "employee": employee,
             "review": review,
-            "questions": questions,
+            "questions": selected_questions,
+            "supervisor_map": supervisor_map,
             "comment_map": comment_map,
             "section_map": section_map,
             "category_slugs": category_slugs,
@@ -124,17 +135,19 @@ async def save_director_comments(request: Request, employee_id: str):
             Review.updated_at,
         )
     ).filter_by(employee_id=employee_id).first()
+    emp = db.query(Employee).filter_by(id=employee_id).first()
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         db.close()
         return HTMLResponse("Access restricted", status_code=403)
-    if not review:
+    if not review or not emp:
         db.close()
         return HTMLResponse("Review not found.", status_code=404)
 
     form = await request.form()
     comments = []
-    for q in questions:
+    selected_questions = get_questions_for_role(emp.role)
+    for q in selected_questions:
         comment = form.get(f"c{q['id']}")
         comments.append({"question": q["question"], "comment": comment})
 
@@ -155,7 +168,7 @@ async def save_director_comments(request: Request, employee_id: str):
         return re.sub(r"[^A-Za-z0-9]+", "_", s).strip("_").lower()
     seen = set()
     categories = []
-    for q in questions:
+    for q in selected_questions:
         cat = q.get("category") or ""
         if cat not in seen:
             seen.add(cat)
