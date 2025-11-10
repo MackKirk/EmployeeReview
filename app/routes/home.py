@@ -181,14 +181,13 @@ async def admin_send_review_link(request: Request, employee_id: str):
 
         token = generate_magic_login_token(str(emp.id), redirect_url=f"/employee/{emp.id}", role=emp.role)
         link = f"{base_url}/magic-login?token={token}"
-        # Supervisor link if this employee supervises anyone (by name)
+        # Supervisor dashboard link for supervisors
         sup_link = None
-        has_subordinate = db.query(Employee).filter(Employee.supervisor_email == emp.name).first() is not None
-        if has_subordinate:
+        if emp.role == "supervisor" or emp.is_supervisor:
             sup_token = generate_magic_login_token(str(emp.id), redirect_url=f"/supervisor/{emp.id}", role=emp.role)
             sup_link = f"{base_url}/magic-login?token={sup_token}"
         subject = "Employee Review Notice"
-        html = build_review_invite_email(emp.name, link, base_url, supervisor_link=sup_link)
+        html = build_review_invite_email(emp.name, link, base_url, supervisor_link=sup_link, is_supervisor=(emp.role == "supervisor" or emp.is_supervisor))
         ok, err = send_email_verbose(emp.email, subject, html)
         from fastapi.responses import RedirectResponse
         if not ok:
@@ -230,12 +229,11 @@ async def admin_send_review_links(request: Request, role: str = Form(None)):
             token = generate_magic_login_token(str(emp.id), redirect_url=f"/employee/{emp.id}", role=emp.role)
             link = f"{base_url}/magic-login?token={token}"
             sup_link = None
-            has_subordinate = db.query(Employee).filter(Employee.supervisor_email == emp.name).first() is not None
-            if has_subordinate:
+            if emp.role == "supervisor" or emp.is_supervisor:
                 sup_token = generate_magic_login_token(str(emp.id), redirect_url=f"/supervisor/{emp.id}", role=emp.role)
                 sup_link = f"{base_url}/magic-login?token={sup_token}"
             subject = "Employee Review Notice"
-            html = build_review_invite_email(emp.name, link, base_url, supervisor_link=sup_link)
+            html = build_review_invite_email(emp.name, link, base_url, supervisor_link=sup_link, is_supervisor=(emp.role == "supervisor" or emp.is_supervisor))
             ok = send_email(emp.email, subject, html)
             if ok:
                 sent += 1

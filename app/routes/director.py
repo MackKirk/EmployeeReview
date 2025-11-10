@@ -644,12 +644,20 @@ async def admin_ui_editor(request: Request):
     path = os.path.join("app", "data", "ui_overrides.json")
     rating_html = ""
     instructions_html = ""
+    employee_email_subject = ""
+    employee_email_html = ""
+    supervisor_email_subject = ""
+    supervisor_email_html = ""
     if os.path.exists(path):
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f) or {}
                 rating_html = data.get("rating_panel_html") or ""
                 instructions_html = data.get("instructions_html") or ""
+                employee_email_subject = data.get("employee_email_subject") or ""
+                employee_email_html = data.get("employee_email_html") or ""
+                supervisor_email_subject = data.get("supervisor_email_subject") or ""
+                supervisor_email_html = data.get("supervisor_email_html") or ""
         except Exception:
             pass
     # Prefill defaults for convenience if nothing saved yet
@@ -692,12 +700,18 @@ async def admin_ui_editor(request: Request):
         "request": request,
         "rating_panel_html": rating_html,
         "instructions_html": instructions_html,
+        "employee_email_subject": employee_email_subject,
+        "employee_email_html": employee_email_html,
+        "supervisor_email_subject": supervisor_email_subject,
+        "supervisor_email_html": supervisor_email_html,
         "message": request.query_params.get("message"),
         "error": request.query_params.get("error"),
     })
 
 @router.post("/admin/ui", response_class=HTMLResponse)
-async def admin_ui_save(request: Request, rating_panel_html: str = Form(""), instructions_html: str = Form("")):
+async def admin_ui_save(request: Request, rating_panel_html: str = Form(""), instructions_html: str = Form(""),
+                        employee_email_subject: str = Form(""), employee_email_html: str = Form(""),
+                        supervisor_email_subject: str = Form(""), supervisor_email_html: str = Form("")):
     current_user = get_current_user(request)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
@@ -710,6 +724,10 @@ async def admin_ui_save(request: Request, rating_panel_html: str = Form(""), ins
                 existing = json.load(f) or {}
         existing["rating_panel_html"] = rating_panel_html
         existing["instructions_html"] = instructions_html
+        existing["employee_email_subject"] = employee_email_subject
+        existing["employee_email_html"] = employee_email_html
+        existing["supervisor_email_subject"] = supervisor_email_subject
+        existing["supervisor_email_html"] = supervisor_email_html
         with open(path, "w", encoding="utf-8") as f:
             json.dump(existing, f, ensure_ascii=False, indent=2)
     except Exception as e:

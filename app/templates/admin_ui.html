@@ -26,6 +26,26 @@
       <textarea name="instructions_html" rows="10" class="w-full border border-gray-300 p-3 rounded" spellcheck="false">{{ instructions_html }}</textarea>
       <p class="text-xs text-gray-500 mt-1">Tip: The Accept button is added by the app. Provide headings/paragraphs/lists as needed.</p>
     </div>
+
+    <div class="border-t pt-4">
+      <h2 class="text-lg font-semibold mb-2">Email templates</h2>
+      <p class="text-xs text-gray-500 mb-2">Optional. If empty, the default email content is used.</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block font-semibold mb-1">Employee email subject</label>
+          <input type="text" name="employee_email_subject" class="w-full border border-gray-300 p-2 rounded" value="{{ employee_email_subject or '' }}" placeholder="Employee Review Notice">
+          <label class="block font-semibold mb-1 mt-2">Employee email HTML</label>
+          <textarea name="employee_email_html" rows="10" class="w-full border border-gray-300 p-3 rounded" placeholder="Custom HTML body for employee">{{ employee_email_html or '' }}</textarea>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Supervisor email subject</label>
+          <input type="text" name="supervisor_email_subject" class="w-full border border-gray-300 p-2 rounded" value="{{ supervisor_email_subject or '' }}" placeholder="Supervisor Review Notice">
+          <label class="block font-semibold mb-1 mt-2">Supervisor email HTML</label>
+          <textarea name="supervisor_email_html" rows="10" class="w-full border border-gray-300 p-3 rounded" placeholder="Custom HTML body for supervisor">{{ supervisor_email_html or '' }}</textarea>
+        </div>
+      </div>
+      <p class="text-xs text-gray-500 mt-2">Placeholders available: {{ '{name}' }} (recipient first name), {{ '{self_link}' }}, {{ '{supervisor_link}' }}, {{ '{base_url}' }}.</p>
+    </div>
     <div class="text-right">
       <button class="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700">Save</button>
       <button type="submit" formaction="/admin/ui/preview" formmethod="post" formtarget="_blank" class="ml-2 bg-gray-100 text-gray-800 px-5 py-2 rounded hover:bg-gray-200">Preview</button>

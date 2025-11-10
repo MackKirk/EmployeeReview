@@ -32,3 +32,12 @@ def get_instructions_html() -> Optional[str]:
     return val if isinstance(val, str) and val.strip() else None
 
 
+def get_email_templates() -> dict:
+    data = _load()
+    return {
+        "employee_subject": (data.get("employee_email_subject") or "").strip(),
+        "employee_html": (data.get("employee_email_html") or "").strip(),
+        "supervisor_subject": (data.get("supervisor_email_subject") or "").strip(),
+        "supervisor_html": (data.get("supervisor_email_html") or "").strip(),
+    }
+

@@ -23,23 +23,50 @@ def send_email(to_email: str, subject: str, html_body: str) -> bool:
         return False
 
 
-def build_review_invite_email(employee_name: str, link: str, base_url: str, supervisor_link: str = None) -> str:
+def build_review_invite_email(employee_name: str, link: str, base_url: str, supervisor_link: str = None, is_supervisor: bool = False) -> str:
     logo_url = f"{base_url.rstrip('/')}/static/logo.png"
     days = int(os.getenv('MAGIC_LINK_MAX_AGE_SECONDS', '604800')) // 86400
-    extra_supervisor = (
-        f"""
+
+    # Try UI overrides
+    try:
+        from app.utils.ui_overrides import get_email_templates
+        tpl = get_email_templates()
+    except Exception:
+        tpl = {"employee_subject": "", "employee_html": "", "supervisor_subject": "", "supervisor_html": ""}
+
+    first_name = (employee_name or "").split(" ")[0] if employee_name else "there"
+    # Build body content
+    if is_supervisor and supervisor_link and tpl.get("supervisor_html"):
+        body_inner = tpl["supervisor_html"].replace("{name}", first_name).replace("{self_link}", link).replace("{supervisor_link}", supervisor_link).replace("{base_url}", base_url)
+        main_cta = f'<a href="{supervisor_link}" style="background:#16a34a;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;display:inline-block;font-weight:600;">Open supervisor dashboard</a>'
+    elif tpl.get("employee_html"):
+        body_inner = tpl["employee_html"].replace("{name}", first_name).replace("{self_link}", link).replace("{supervisor_link}", supervisor_link or "").replace("{base_url}", base_url)
+        main_cta = f'<a href="{link}" style="background:#2563eb;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;display:inline-block;font-weight:600;">Open your review</a>'
+    else:
+        # Default copy
+        default_copy = """
+        <p style="margin:0 0 12px 0;">We’re excited to launch our employee reviews. These are designed to be positive, supportive, and constructive.</p>
+        <p style="margin:0 0 8px 0;">What these reviews are for:</p>
+        <ul style="margin:0 0 12px 18px;padding:0;">
+          <li>Hearing how you’re feeling in your role</li>
+          <li>Providing an open space for honest feedback</li>
+          <li>Reflecting on goals, growth, and accomplishments</li>
+          <li>Identifying how we can support your development</li>
+        </ul>
+        <p style="margin:0 0 12px 0;">Please complete your review within the next two weeks. Your responses are confidential and intended to help you thrive.</p>
+        """
+        body_inner = default_copy
+        main_cta = f'<a href="{link}" style="background:#2563eb;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;display:inline-block;font-weight:600;">Open your review</a>'
+
+    extra_supervisor = ""
+    if supervisor_link:
+        extra_supervisor = f"""
             <tr>
-              <td style=\"padding:0 24px 12px 24px;color:#374151;font-size:14px;line-height:1.6;\">
-                <p style=\"margin:0 0 8px 0;\"><strong>Are you a supervisor?</strong> You can also review your team using the link below:</p>
-              </td>
-            </tr>
-            <tr>
-              <td align=\"center\" style=\"padding:0 24px 20px 24px;\">
-                <a href=\"{supervisor_link}\" style=\"background:#16a34a;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:8px;display:inline-block;font-weight:600;\">Open supervisor dashboard</a>
+              <td align="center" style="padding:0 24px 20px 24px;">
+                <a href="{supervisor_link}" style="background:#16a34a;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:8px;display:inline-block;font-weight:600;">Open supervisor dashboard</a>
               </td>
             </tr>
         """
-    ) if supervisor_link else ""
 
     return (
         f"""
@@ -62,22 +89,14 @@ def build_review_invite_email(employee_name: str, link: str, base_url: str, supe
             </tr>
             <tr>
               <td style="padding:12px 24px;color:#374151;font-size:14px;line-height:1.6;">
-                <p style="margin:0 0 12px 0;">Hi {employee_name.split(' ')[0] if employee_name else 'there'},</p>
-                <p style="margin:0 0 12px 0;">We’re excited to launch our employee reviews. These are designed to be positive, supportive, and constructive.</p>
-                <p style="margin:0 0 8px 0;">What these reviews are for:</p>
-                <ul style="margin:0 0 12px 18px;padding:0;">
-                  <li>Hearing how you’re feeling in your role</li>
-                  <li>Providing an open space for honest feedback</li>
-                  <li>Reflecting on goals, growth, and accomplishments</li>
-                  <li>Identifying how we can support your development</li>
-                </ul>
-                <p style="margin:0 0 12px 0;">Please complete your review within the next two weeks. Your responses are confidential and intended to help you thrive.</p>
+                <p style="margin:0 0 12px 0;">Hi {first_name},</p>
+                {body_inner}
               </td>
             </tr>
             <tr>
               <td align="center" style="padding:4px 24px 20px 24px;">
-                <a href="{link}" style="background:#2563eb;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;display:inline-block;font-weight:600;">Open your review</a>
-                <div style="color:#6b7280;font-size:12px;margin-top:10px;">If the button doesn’t work, copy this URL:<br>{link}</div>
+                {main_cta}
+                <div style="color:#6b7280;font-size:12px;margin-top:10px;">If a button doesn’t work, copy this URL:<br>{link}</div>
                 <div style="color:#9ca3af;font-size:12px;margin-top:8px;">This secure link expires in {days} days.</div>
               </td>
             </tr>
