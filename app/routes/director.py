@@ -505,6 +505,13 @@ async def admin_questions_save(request: Request, role: str = Form("employee"), j
         from fastapi.responses import RedirectResponse
         return RedirectResponse(f"/admin/questions?role={role}&error=Save%20failed:%20{str(e).replace(' ', '%20')}", status_code=302)
 
+    # Clear cached overrides so reload reflects changes immediately
+    try:
+        from app.utils import questions as qmod
+        qmod._overrides = None  # type: ignore
+    except Exception:
+        pass
+
     from fastapi.responses import RedirectResponse
     return RedirectResponse(f"/admin/questions?role={role}&message=Saved", status_code=302)
 
