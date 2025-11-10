@@ -9,6 +9,7 @@ from app.utils.ui_overrides import get_rating_panel_html
 from app.utils.auth_utils import get_current_user
 import uuid
 from datetime import datetime
+from sqlalchemy.orm import load_only
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -45,7 +46,18 @@ async def supervisor_dashboard(request: Request, supervisor_id: str):
     subordinates = db.query(Employee).filter_by(supervisor_email=supervisor.name).all()
     data = []
     for emp in subordinates:
-        r = db.query(Review).filter_by(employee_id=emp.id).first()
+        r = db.query(Review).options(
+            load_only(
+                Review.id,
+                Review.employee_id,
+                Review.employee_answers,
+                Review.supervisor_answers,
+                Review.director_comments,
+                Review.status,
+                Review.created_at,
+                Review.updated_at,
+            )
+        ).filter_by(employee_id=emp.id).first()
         employee_done = bool(r and r.employee_answers)
         supervisor_done = bool(r and r.supervisor_answers)
         data.append({
@@ -81,7 +93,18 @@ async def supervisor_review(request: Request, employee_id: str):
         db.close()
         return HTMLResponse("Access denied", status_code=403)
 
-    review = db.query(Review).filter_by(employee_id=employee.id).first()
+    review = db.query(Review).options(
+        load_only(
+            Review.id,
+            Review.employee_id,
+            Review.employee_answers,
+            Review.supervisor_answers,
+            Review.director_comments,
+            Review.status,
+            Review.created_at,
+            Review.updated_at,
+        )
+    ).filter_by(employee_id=employee.id).first()
     existing = review.supervisor_answers if review else None
     existing_map = {a["question"]: a.get("value") for a in existing} if existing else {}
     comment_map = {a["question"]: a.get("comment") for a in existing} if existing else {}

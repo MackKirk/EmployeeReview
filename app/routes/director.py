@@ -12,6 +12,8 @@ import json
 from app.utils.ui_overrides import get_rating_panel_html
 from datetime import datetime
 import re
+from sqlalchemy.orm import load_only
+from sqlalchemy import text
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -22,7 +24,19 @@ async def director_view_review(request: Request, employee_id: str):
     is_admin = bool(request.session.get("is_admin"))
     db: Session = SessionLocal()
     employee = db.query(Employee).filter_by(id=employee_id).first()
-    review = db.query(Review).filter_by(employee_id=employee_id).first()
+    review = db.query(Review).options(
+        load_only(
+            Review.id,
+            Review.employee_id,
+            Review.supervisor_id,
+            Review.employee_answers,
+            Review.supervisor_answers,
+            Review.director_comments,
+            Review.status,
+            Review.created_at,
+            Review.updated_at,
+        )
+    ).filter_by(employee_id=employee_id).first()
     if not ((current_user and current_user.role == "director") or is_admin):
         db.close()
         return HTMLResponse("Access restricted", status_code=403)
@@ -55,7 +69,19 @@ async def director_view_review(request: Request, employee_id: str):
 async def save_director_comments(request: Request, employee_id: str):
     current_user = get_current_user(request)
     db: Session = SessionLocal()
-    review = db.query(Review).filter_by(employee_id=employee_id).first()
+    review = db.query(Review).options(
+        load_only(
+            Review.id,
+            Review.employee_id,
+            Review.supervisor_id,
+            Review.employee_answers,
+            Review.supervisor_answers,
+            Review.director_comments,
+            Review.status,
+            Review.created_at,
+            Review.updated_at,
+        )
+    ).filter_by(employee_id=employee_id).first()
     if not current_user or current_user.role != "director":
         db.close()
         return HTMLResponse("Access restricted", status_code=403)
@@ -93,7 +119,20 @@ async def director_dashboard(request: Request):
         return HTMLResponse("Access restricted", status_code=403)
 
     from sqlalchemy.orm import joinedload
-    reviews = db.query(Review).options(joinedload(Review.employee)).all()
+    reviews = db.query(Review).options(
+        load_only(
+            Review.id,
+            Review.employee_id,
+            Review.supervisor_id,
+            Review.employee_answers,
+            Review.supervisor_answers,
+            Review.director_comments,
+            Review.status,
+            Review.created_at,
+            Review.updated_at,
+        ),
+        joinedload(Review.employee),
+    ).all()
     db.close()
 
     return templates.TemplateResponse("director_dashboard.html", {
@@ -113,18 +152,49 @@ async def admin_page(request: Request):
     try:
         from sqlalchemy.orm import joinedload
         employees = db.query(Employee).all()
+        # Check if schedule column exists to avoid 500 before migration runs
+        col_exists = False
+        try:
+            exists_sql = text("SELECT 1 FROM information_schema.columns WHERE table_name='reviews' AND column_name='employee_scheduled_at'")
+            col_exists = db.execute(exists_sql).first() is not None
+        except Exception:
+            col_exists = False
         rows = []
         for emp in employees:
-            r = db.query(Review).options(joinedload(Review.employee)).filter_by(employee_id=emp.id).first()
+            r = db.query(Review).options(
+                load_only(
+                    Review.id,
+                    Review.employee_id,
+                    Review.supervisor_id,
+                    Review.employee_answers,
+                    Review.supervisor_answers,
+                    Review.director_comments,
+                    Review.status,
+                    Review.created_at,
+                    Review.updated_at,
+                ),
+                joinedload(Review.employee),
+            ).filter_by(employee_id=emp.id).first()
             employee_done = bool(r and r.employee_answers)
             supervisor_done = bool(r and r.supervisor_answers)
             director_done = bool(r and r.director_comments)
             # Email tracking
             has_sent = db.query(EmailEvent).filter_by(employee_id=emp.id, event_type="sent").first() is not None
             has_clicked = db.query(EmailEvent).filter_by(employee_id=emp.id, event_type="clicked").first() is not None
-            sched_at = getattr(r, "employee_scheduled_at", None) if r else None
-            sched_display = sched_at.strftime("%Y-%m-%d %H:%M") if sched_at else None
-            sched_value = sched_at.strftime("%Y-%m-%dT%H:%M") if sched_at else ""
+            sched_display = None
+            sched_value = ""
+            if col_exists and r:
+                try:
+                    # Load schedule lazily via direct SQL to avoid selecting missing column elsewhere
+                    srow = db.execute(
+                        text("SELECT employee_scheduled_at FROM reviews WHERE id=:id"),
+                        {"id": str(r.id)},
+                    ).first()
+                    if srow and srow[0]:
+                        sched_display = srow[0].strftime("%Y-%m-%d %H:%M")
+                        sched_value = srow[0].strftime("%Y-%m-%dT%H:%M")
+                except Exception:
+                    pass
             rows.append({
                 "employee": emp,
                 "employee_done": employee_done,
@@ -190,38 +260,55 @@ async def admin_update_employee(request: Request, employee_id: str, role: str = 
                     sup_emp.is_supervisor = True
             changed = True
 
-        # Handle scheduling the employee self review
+        # Handle scheduling the employee self review (only if column exists)
         schedule_val = (self_scheduled_at or "").strip()
-        if schedule_val:
-            try:
-                # Expecting 'YYYY-MM-DDTHH:MM' from input[type=datetime-local]
-                parsed = datetime.strptime(schedule_val, "%Y-%m-%dT%H:%M")
-            except Exception:
-                from fastapi.responses import RedirectResponse
-                return RedirectResponse("/admin?error=Invalid%20date%20format", status_code=302)
-            # Find or create review
-            review = db.query(Review).filter_by(employee_id=emp.id).first()
-            if not review:
-                review = Review(employee_id=emp.id)
-                db.add(review)
-                db.flush()
-            # Duplicate check: another review with same datetime
-            dup = db.query(Review).filter(
-                Review.employee_scheduled_at == parsed,
-                Review.employee_id != emp.id
-            ).first()
-            if dup:
-                from fastapi.responses import RedirectResponse
-                return RedirectResponse("/admin?error=Já%20existe%20um%20agendamento%20com%20esta%20data%20e%20hora", status_code=302)
-            if review.employee_scheduled_at != parsed:
-                review.employee_scheduled_at = parsed
+        try:
+            exists_sql = text("SELECT 1 FROM information_schema.columns WHERE table_name='reviews' AND column_name='employee_scheduled_at'")
+            schedule_col_exists = db.execute(exists_sql).first() is not None
+        except Exception:
+            schedule_col_exists = False
+        if schedule_col_exists:
+            if schedule_val:
+                try:
+                    # Expecting 'YYYY-MM-DDTHH:MM' from input[type=datetime-local]
+                    parsed = datetime.strptime(schedule_val, "%Y-%m-%dT%H:%M")
+                except Exception:
+                    from fastapi.responses import RedirectResponse
+                    return RedirectResponse("/admin?error=Invalid%20date%20format", status_code=302)
+                # Find or create review
+                review = db.query(Review).options(
+                    load_only(Review.id, Review.employee_id)
+                ).filter_by(employee_id=emp.id).first()
+                if not review:
+                    review = Review(employee_id=emp.id)
+                    db.add(review)
+                    db.flush()
+                # Duplicate check: another review with same datetime
+                dup = db.execute(
+                    text("SELECT 1 FROM reviews WHERE employee_scheduled_at = :dt AND employee_id <> :eid LIMIT 1"),
+                    {"dt": parsed, "eid": str(emp.id)},
+                ).first()
+                if dup:
+                    from fastapi.responses import RedirectResponse
+                    return RedirectResponse("/admin?error=Já%20existe%20um%20agendamento%20com%20esta%20data%20e%20hora", status_code=302)
+                # Update via direct SQL to avoid ORM selecting missing columns
+                if review and getattr(review, "id", None):
+                    db.execute(
+                        text("UPDATE reviews SET employee_scheduled_at = :dt WHERE id = :id"),
+                        {"dt": parsed, "id": str(review.id)},
+                    )
                 changed = True
-        else:
-            # Allow clearing the schedule
-            review = db.query(Review).filter_by(employee_id=emp.id).first()
-            if review and review.employee_scheduled_at is not None:
-                review.employee_scheduled_at = None
-                changed = True
+            else:
+                # Allow clearing the schedule
+                review = db.query(Review).options(
+                    load_only(Review.id, Review.employee_id)
+                ).filter_by(employee_id=emp.id).first()
+                if review and getattr(review, "id", None):
+                    db.execute(
+                        text("UPDATE reviews SET employee_scheduled_at = NULL WHERE id = :id"),
+                        {"id": str(review.id)},
+                    )
+                    changed = True
 
         if changed:
             db.commit()

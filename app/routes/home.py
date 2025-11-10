@@ -9,6 +9,7 @@ from app.utils.auth_utils import generate_magic_login_token
 from app.utils.email import send_email, build_review_invite_email, send_email_verbose
 from app.utils.seed import seed_employees_from_csv
 import os
+from sqlalchemy.orm import load_only
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -22,7 +23,18 @@ async def home(request: Request):
     db: Session = SessionLocal()
 
     # Review of the logged in user
-    review = db.query(Review).filter_by(employee_id=user.id).first()
+    review = db.query(Review).options(
+        load_only(
+            Review.id,
+            Review.employee_id,
+            Review.employee_answers,
+            Review.supervisor_answers,
+            Review.director_comments,
+            Review.status,
+            Review.created_at,
+            Review.updated_at,
+        )
+    ).filter_by(employee_id=user.id).first()
     filled = review and review.employee_answers
     employee_card_title = "View my answers" if filled else "Fill self review"
 
@@ -31,7 +43,18 @@ async def home(request: Request):
     if user.role == "supervisor" or user.is_supervisor:
         subordinates = db.query(Employee).filter_by(supervisor_email=user.name).all()
         for emp in subordinates:
-            r = db.query(Review).filter_by(employee_id=emp.id).first()
+            r = db.query(Review).options(
+                load_only(
+                    Review.id,
+                    Review.employee_id,
+                    Review.employee_answers,
+                    Review.supervisor_answers,
+                    Review.director_comments,
+                    Review.status,
+                    Review.created_at,
+                    Review.updated_at,
+                )
+            ).filter_by(employee_id=emp.id).first()
             if not r or not r.supervisor_answers:
                 supervisor_pending += 1
 

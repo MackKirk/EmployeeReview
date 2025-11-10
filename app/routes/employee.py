@@ -9,6 +9,7 @@ from app.utils.ui_overrides import get_rating_panel_html, get_instructions_html
 from app.utils.auth_utils import get_current_user
 import uuid
 from datetime import datetime
+from sqlalchemy.orm import load_only
 
 
 router = APIRouter()
@@ -23,7 +24,18 @@ async def employee_review(request: Request, employee_id: str):
 
     db: Session = SessionLocal()
     employee = db.query(Employee).filter_by(id=employee_id).first()
-    review = db.query(Review).filter_by(employee_id=employee_id).first()
+    review = db.query(Review).options(
+        load_only(
+            Review.id,
+            Review.employee_id,
+            Review.employee_answers,
+            Review.supervisor_answers,
+            Review.director_comments,
+            Review.status,
+            Review.created_at,
+            Review.updated_at,
+        )
+    ).filter_by(employee_id=employee_id).first()
     existing = review.employee_answers if review else None
     existing_map = {a["question"]: a.get("value") for a in existing} if existing else {}
     readonly = bool(existing)
@@ -77,7 +89,9 @@ async def submit_employee_review(request: Request, employee_id: str):
         })
 
     # Create or update review
-    existing = db.query(Review).filter_by(employee_id=employee.id).first()
+    existing = db.query(Review).options(
+        load_only(Review.id, Review.employee_id, Review.employee_answers, Review.created_at, Review.updated_at)
+    ).filter_by(employee_id=employee.id).first()
     if existing and existing.employee_answers:
         db.close()
         return HTMLResponse("Review already submitted", status_code=400)
