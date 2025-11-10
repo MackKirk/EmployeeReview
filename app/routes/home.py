@@ -61,7 +61,15 @@ async def home(request: Request):
     # Pending reviews for director
     director_pending = 0
     if user.role == "director":
-        all_reviews = db.query(Review).all()
+        from sqlalchemy.orm import load_only as _load_only
+        all_reviews = db.query(Review).options(
+            _load_only(
+                Review.id,
+                Review.employee_answers,
+                Review.supervisor_answers,
+                Review.director_comments,
+            )
+        ).all()
         for r in all_reviews:
             if r.employee_answers and r.supervisor_answers and not r.director_comments:
                 director_pending += 1

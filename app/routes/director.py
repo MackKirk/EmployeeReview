@@ -33,7 +33,6 @@ async def director_view_review(request: Request, employee_id: str):
             Review.employee_answers,
             Review.supervisor_answers,
             Review.director_comments,
-            Review.director_section_comments,
             Review.status,
             Review.created_at,
             Review.updated_at,
@@ -51,8 +50,9 @@ async def director_view_review(request: Request, employee_id: str):
         return HTMLResponse("Incomplete review.", status_code=400)
     existing = review.director_comments or []
     comment_map = {c["question"]: c.get("comment") for c in existing}
-    existing_sections = review.director_section_comments or []
-    section_map = {c["category"]: c.get("comment") for c in existing_sections}
+    # Section comments: ensure column exists, then fetch via SQL to avoid selecting missing column in ORM
+    existing_sections = []
+    section_map = {}
 
     # Ensure section comments column exists (auto-migrate)
     try:
@@ -65,6 +65,17 @@ async def director_view_review(request: Request, employee_id: str):
                 db.rollback()
     except Exception:
         pass
+    try:
+        row = db.execute(
+            text("SELECT director_section_comments FROM reviews WHERE id = CAST(:id AS uuid)"),
+            {"id": str(review.id)},
+        ).first()
+        if row and row[0]:
+            existing_sections = row[0]
+            section_map = {c.get("category"): c.get("comment") for c in (existing_sections or []) if isinstance(c, dict)}
+    except Exception:
+        existing_sections = []
+        section_map = {}
 
     allow_comments = bool((current_user and current_user.role == "director") or is_admin)
     rating_panel_html = get_rating_panel_html()
@@ -108,7 +119,6 @@ async def save_director_comments(request: Request, employee_id: str):
             Review.employee_answers,
             Review.supervisor_answers,
             Review.director_comments,
-            Review.director_section_comments,
             Review.status,
             Review.created_at,
             Review.updated_at,

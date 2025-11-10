@@ -20,24 +20,21 @@ async def supervisor_dashboard(request: Request, supervisor_id: str):
     current_user = get_current_user(request)
     db: Session = SessionLocal()
     supervisor = db.query(Employee).filter_by(id=supervisor_id).first()
+    is_admin = bool(request.session.get("is_admin"))
     if (
         not current_user
         or str(current_user.id) != supervisor_id
         or not (
-            current_user.role == "supervisor"
+            is_admin
+            or current_user.role == "director"
+            or current_user.role == "supervisor"
             or current_user.is_supervisor
-            or (current_user.role == "director" and current_user.is_supervisor)
         )
     ):
         db.close()
         return HTMLResponse("Access denied", status_code=403)
-    # Confirm that the target user exists and is actually a supervisor using the
-    # role field. Some databases might not populate the `is_supervisor` flag,
-    # which caused false negatives when a supervisor attempted to access their
-    # dashboard.
-    if not supervisor or not (
-        supervisor.role == "supervisor" or supervisor.is_supervisor
-    ):
+    # If the target user is missing entirely, block; otherwise allow directors/admins even if the flag isn't set.
+    if not supervisor:
         db.close()
         return HTMLResponse(
             "Supervisor not found or access denied", status_code=403
