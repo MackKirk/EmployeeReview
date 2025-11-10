@@ -28,6 +28,7 @@ class Review(Base):
     employee_answers = Column(JSONB, nullable=True)
     supervisor_answers = Column(JSONB, nullable=True)
     director_comments = Column(JSONB, nullable=True)
+    director_section_comments = Column(JSONB, nullable=True)
     status = Column(String, default="draft")
     employee_scheduled_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

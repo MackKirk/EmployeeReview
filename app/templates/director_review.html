@@ -11,6 +11,15 @@
 {% for q in questions %}
   {% if q.category != ns.current_category %}
     <h2 class="text-xl font-bold text-gray-800 mt-10 border-b pb-1">{{ q.category }}</h2>
+    {% if allow_comments %}
+    <div class="mb-4">
+      <textarea name="sc_{{ category_slugs.get(q.category) }}" rows="2" class="w-full border border-gray-300 p-2 rounded" placeholder="Director section comment">{{ section_map.get(q.category, '') }}</textarea>
+    </div>
+    {% else %}
+      {% if section_map.get(q.category) %}
+      <div class="text-sm text-gray-600 mb-2"><span class="font-semibold">Director section note:</span> {{ section_map.get(q.category) }}</div>
+      {% endif %}
+    {% endif %}
     {% set ns.current_category = q.category %}
   {% endif %}
 

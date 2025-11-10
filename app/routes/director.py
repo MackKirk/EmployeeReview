@@ -32,6 +32,7 @@ async def director_view_review(request: Request, employee_id: str):
             Review.employee_answers,
             Review.supervisor_answers,
             Review.director_comments,
+            Review.director_section_comments,
             Review.status,
             Review.created_at,
             Review.updated_at,
@@ -49,9 +50,36 @@ async def director_view_review(request: Request, employee_id: str):
         return HTMLResponse("Incomplete review.", status_code=400)
     existing = review.director_comments or []
     comment_map = {c["question"]: c.get("comment") for c in existing}
+    existing_sections = review.director_section_comments or []
+    section_map = {c["category"]: c.get("comment") for c in existing_sections}
 
-    allow_comments = bool(current_user and current_user.role == "director")
+    # Ensure section comments column exists (auto-migrate)
+    try:
+        exists_sql = text("SELECT 1 FROM information_schema.columns WHERE table_name='reviews' AND column_name='director_section_comments'")
+        if db.execute(exists_sql).first() is None:
+            try:
+                db.execute(text("ALTER TABLE reviews ADD COLUMN IF NOT EXISTS director_section_comments JSONB NULL"))
+                db.commit()
+            except Exception:
+                db.rollback()
+    except Exception:
+        pass
+
+    allow_comments = bool((current_user and current_user.role == "director") or is_admin)
     rating_panel_html = get_rating_panel_html()
+
+    # Build category slug map for template inputs
+    cats = []
+    seen = set()
+    for q in questions:
+        cat = q.get("category") or ""
+        if cat not in seen:
+            seen.add(cat)
+            cats.append(cat)
+    def slug(s: str) -> str:
+        return re.sub(r"[^A-Za-z0-9]+", "_", s).strip("_").lower()
+    category_slugs = {c: slug(c) for c in cats}
+
     return templates.TemplateResponse(
         "director_review.html",
         {
@@ -60,6 +88,8 @@ async def director_view_review(request: Request, employee_id: str):
             "review": review,
             "questions": questions,
             "comment_map": comment_map,
+            "section_map": section_map,
+            "category_slugs": category_slugs,
             "rating_panel_html": rating_panel_html,
             "allow_comments": allow_comments,
         },
@@ -77,12 +107,14 @@ async def save_director_comments(request: Request, employee_id: str):
             Review.employee_answers,
             Review.supervisor_answers,
             Review.director_comments,
+            Review.director_section_comments,
             Review.status,
             Review.created_at,
             Review.updated_at,
         )
     ).filter_by(employee_id=employee_id).first()
-    if not current_user or current_user.role != "director":
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
         db.close()
         return HTMLResponse("Access restricted", status_code=403)
     if not review:
@@ -95,7 +127,35 @@ async def save_director_comments(request: Request, employee_id: str):
         comment = form.get(f"c{q['id']}")
         comments.append({"question": q["question"], "comment": comment})
 
+    # Section comments
+    # Ensure column exists
+    try:
+        exists_sql = text("SELECT 1 FROM information_schema.columns WHERE table_name='reviews' AND column_name='director_section_comments'")
+        if db.execute(exists_sql).first() is None:
+            try:
+                db.execute(text("ALTER TABLE reviews ADD COLUMN IF NOT EXISTS director_section_comments JSONB NULL"))
+                db.commit()
+            except Exception:
+                db.rollback()
+    except Exception:
+        pass
+    # Build slugs consistent with view
+    def slug(s: str) -> str:
+        return re.sub(r"[^A-Za-z0-9]+", "_", s).strip("_").lower()
+    seen = set()
+    categories = []
+    for q in questions:
+        cat = q.get("category") or ""
+        if cat not in seen:
+            seen.add(cat)
+            categories.append(cat)
+    section_comments = []
+    for cat in categories:
+        val = form.get(f"sc_{slug(cat)}")
+        section_comments.append({"category": cat, "comment": val})
+
     review.director_comments = comments
+    review.director_section_comments = section_comments
     db.commit()
     db.close()
 
