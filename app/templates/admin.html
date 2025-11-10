@@ -50,13 +50,27 @@
 
   <div class="flex items-center justify-between mb-3">
     <div class="flex items-center gap-2">
-      <input id="admin-search" type="text" placeholder="Search name..." class="border rounded px-3 py-2 w-64" autocomplete="off">
+      <input id="admin-search" type="text" placeholder="Search name..." class="border rounded px-3 py-2 w-64" autocomplete="off" autofocus>
       <select id="admin-filter-role" class="border rounded px-2 py-2">
         <option value="">All roles</option>
         {% for r in allowed_roles %}
         <option value="{{ r }}">{{ r }}</option>
         {% endfor %}
       </select>
+    </div>
+    <div class="flex items-center gap-4">
+      <label class="inline-flex items-center text-sm text-gray-700">
+        <input type="checkbox" id="filter-miss-sup" class="mr-2">
+        Missing supervisor
+      </label>
+      <label class="inline-flex items-center text-sm text-gray-700">
+        <input type="checkbox" id="filter-miss-dir" class="mr-2">
+        Missing director
+      </label>
+      <label class="inline-flex items-center text-sm text-gray-700">
+        <input type="checkbox" id="filter-hide-completed" class="mr-2">
+        Hide completed
+      </label>
     </div>
   </div>
   <div class="flex items-center justify-between mb-3">
@@ -134,7 +148,7 @@
             <form method="post" action="/admin/send-review-link/{{ row.employee.id }}" class="inline">
               <button class="ml-2" title="Send email">✉️</button>
             </form>
-            <a href="/director/review/{{ row.employee.id }}" class="ml-3 text-gray-700 hover:underline" title="View compare">👁️</a>
+            <a href="/director/review/{{ row.employee.id }}" class="ml-3 text-gray-700 hover:underline" title="View compare" target="_blank">👁️</a>
             <a href="/admin/open-review/{{ row.employee.id }}" class="ml-3 text-gray-700 hover:underline" title="Open as user" target="_blank">🔗</a>
           </td>
         </tr>
@@ -307,6 +321,9 @@
       var search = document.getElementById('admin-search');
       var roleFilter = document.getElementById('admin-filter-role');
       var tbody = document.querySelector('#admin-table tbody');
+      var missSup = document.getElementById('filter-miss-sup');
+      var missDir = document.getElementById('filter-miss-dir');
+      var hideCompleted = document.getElementById('filter-hide-completed');
       function applyFilter() {
         var q = (search.value || '').toLowerCase().trim();
         var roleq = (roleFilter && roleFilter.value) ? roleFilter.value.toLowerCase().trim() : '';
@@ -318,7 +335,14 @@
           var roleDisp = row.querySelector('.role-display');
           var roleTxt = roleDisp ? ((roleDisp.textContent || '').toLowerCase().trim()) : '';
           var showByRole = !roleq || roleTxt === roleq;
-          row.style.display = (showByName && showByRole) ? '' : 'none';
+          // Status checks
+          var selfDone = row.querySelector('td:nth-child(5)')?.textContent.indexOf('✅') !== -1;
+          var supDone = row.querySelector('td:nth-child(6)')?.textContent.indexOf('✅') !== -1;
+          var dirDone = row.querySelector('td:nth-child(7)')?.textContent.indexOf('✅') !== -1;
+          var showByMissSup = !missSup || !missSup.checked || !supDone;
+          var showByMissDir = !missDir || !missDir.checked || !dirDone;
+          var showByHideCompleted = !hideCompleted || !hideCompleted.checked || !(selfDone && supDone && dirDone);
+          row.style.display = (showByName && showByRole && showByMissSup && showByMissDir && showByHideCompleted) ? '' : 'none';
         });
       }
       if (search) {
@@ -327,6 +351,17 @@
       if (roleFilter) {
         roleFilter.addEventListener('change', applyFilter);
       }
+      if (missSup) missSup.addEventListener('change', applyFilter);
+      if (missDir) missDir.addEventListener('change', applyFilter);
+      if (hideCompleted) hideCompleted.addEventListener('change', applyFilter);
+      // Initialize from ?q=
+      try {
+        var params = new URLSearchParams(window.location.search);
+        var qParam = params.get('q') || '';
+        if (qParam) {
+          search.value = qParam;
+        }
+      } catch (e) {}
       applyFilter();
 
       // Sorting
