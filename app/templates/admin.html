@@ -2,7 +2,7 @@
 {% block title %}Administration{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto bg-white p-8 rounded-xl shadow space-y-6">
+<div class="max-w-7xl mx-auto bg-white p-8 rounded-xl shadow space-y-6">
   <h1 class="text-3xl font-bold text-gray-800">Administration</h1>
 
   <div class="flex items-center justify-between">
@@ -56,6 +56,10 @@
       <button id="bulk-edit-sup" type="button" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200">Bulk edit supervisors</button>
       <button id="bulk-save-sup" type="button" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" style="display:none;">Save all</button>
       <button id="bulk-cancel-sup" type="button" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200" style="display:none;">Cancel</button>
+      <span class="inline-block w-3"></span>
+      <button id="bulk-edit-role" type="button" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200">Bulk edit roles</button>
+      <button id="bulk-save-role" type="button" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" style="display:none;">Save all</button>
+      <button id="bulk-cancel-role" type="button" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200" style="display:none;">Cancel</button>
     </div>
   </div>
 
@@ -72,7 +76,7 @@
           <th class="p-3 text-center">Director</th>
           <th class="p-3 text-center">Email</th>
           <th class="p-3 text-center">Clicked</th>
-          <th class="p-3 text-center">Action</th>
+          <th class="p-3 text-center sticky right-0 bg-gray-100">Action</th>
         </tr>
       </thead>
       <tbody class="text-sm text-gray-700 divide-y divide-gray-200">
@@ -113,7 +117,7 @@
           <td class="p-3 text-center">{% if row.director_done %}✅{% else %}❌{% endif %}</td>
           <td class="p-3 text-center">{% if row.has_sent %}📧{% else %}—{% endif %}</td>
           <td class="p-3 text-center">{% if row.has_clicked %}🟢{% else %}—{% endif %}</td>
-          <td class="p-3 text-center">
+          <td class="p-3 text-center sticky right-0 bg-white">
               <button type="button" class="edit-row text-gray-700 hover:text-black" title="Edit" data-emp-id="{{ row.employee.id }}">✏️</button>
               <button type="submit" class="save-row ml-2 bg-gray-100 px-2 py-1 rounded hover:bg-gray-200" style="display:none;" title="Save" data-emp-id="{{ row.employee.id }}">💾</button>
             </form>
@@ -233,6 +237,55 @@
             input.type = 'hidden';
             input.name = 'supervisor_name[' + empId + ']';
             input.value = supSel.value || '';
+            form.appendChild(input);
+          });
+          document.body.appendChild(form);
+          form.submit();
+        });
+      }
+
+      // Bulk edit roles
+      var bulkRoleBtn = document.getElementById('bulk-edit-role');
+      var bulkRoleSave = document.getElementById('bulk-save-role');
+      var bulkRoleCancel = document.getElementById('bulk-cancel-role');
+      function setBulkRoleMode(on) {
+        bulkRoleBtn.style.display = on ? 'none' : '';
+        bulkRoleSave.style.display = on ? '' : 'none';
+        bulkRoleCancel.style.display = on ? '' : 'none';
+        var rows = document.querySelectorAll('#admin-table tbody tr');
+        rows.forEach(function(row){
+          var empId = row.querySelector('button.edit-row')?.getAttribute('data-emp-id');
+          if (!empId) return;
+          var roleDisp = row.querySelector('.role-display[data-emp-id="' + empId + '"]');
+          var roleSel = row.querySelector('select[data-role-select][data-emp-id="' + empId + '"]');
+          if (!roleDisp || !roleSel) return;
+          if (on) {
+            roleDisp.style.display = 'none';
+            roleSel.style.display = '';
+            roleSel.disabled = false;
+          } else {
+            roleDisp.style.display = '';
+            roleSel.style.display = 'none';
+            roleSel.disabled = true;
+          }
+        });
+      }
+      if (bulkRoleBtn) bulkRoleBtn.addEventListener('click', function(){ setBulkRoleMode(true); });
+      if (bulkRoleCancel) bulkRoleCancel.addEventListener('click', function(){ setBulkRoleMode(false); });
+      if (bulkRoleSave) {
+        bulkRoleSave.addEventListener('click', function(){
+          var form = document.createElement('form');
+          form.method = 'post';
+          form.action = '/admin/bulk-update-roles';
+          var rows = document.querySelectorAll('#admin-table tbody tr');
+          rows.forEach(function(row){
+            var empId = row.querySelector('button.edit-row')?.getAttribute('data-emp-id');
+            var roleSel = row.querySelector('select[data-role-select][data-emp-id="' + empId + '"]');
+            if (!empId || !roleSel) return;
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'role[' + empId + ']';
+            input.value = roleSel.value || '';
             form.appendChild(input);
           });
           document.body.appendChild(form);

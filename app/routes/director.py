@@ -364,6 +364,55 @@ async def admin_bulk_update_supervisors(request: Request):
     finally:
         db.close()
 
+
+@router.post("/admin/bulk-update-roles", response_class=HTMLResponse)
+async def admin_bulk_update_roles(request: Request):
+    current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
+        return HTMLResponse("Access restricted", status_code=403)
+
+    form = await request.form()
+    pattern = re.compile(r"^role\[(.+)\]$")
+    updates = {}
+    allowed = {"employee", "supervisor", "administration", "director"}
+    for key, value in form.multi_items():
+        m = pattern.match(key)
+        if not m:
+            continue
+        emp_id = m.group(1)
+        role_val = (value or "").strip().lower()
+        if role_val not in allowed:
+            continue
+        updates[emp_id] = role_val
+
+    if not updates:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse("/admin?error=Nenhuma%20alteração%20informada", status_code=302)
+
+    db: Session = SessionLocal()
+    changed = 0
+    try:
+        for emp_id, role_val in updates.items():
+            emp = db.query(Employee).filter_by(id=emp_id).first()
+            if not emp:
+                continue
+            if emp.role != role_val:
+                emp.role = role_val
+                if role_val == "supervisor":
+                    if not emp.is_supervisor:
+                        emp.is_supervisor = True
+                else:
+                    if emp.is_supervisor:
+                        emp.is_supervisor = False
+                changed += 1
+        if changed:
+            db.commit()
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(f"/admin?message=Atualizado:%20{changed}", status_code=302)
+    finally:
+        db.close()
+
 @router.get("/admin/open-review/{employee_id}")
 async def admin_open_review(request: Request, employee_id: str):
     current_user = get_current_user(request)
