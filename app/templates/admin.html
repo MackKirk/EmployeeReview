@@ -48,8 +48,16 @@
     <div class="p-3 rounded bg-red-50 text-red-800 border border-red-200">{{ error }}</div>
   {% endif %}
 
-  <div class="flex justify-end mb-3">
-    <input id="admin-search" type="text" placeholder="Search name..." class="border rounded px-3 py-2 w-64" autocomplete="off">
+  <div class="flex items-center justify-between mb-3">
+    <div class="flex items-center gap-2">
+      <input id="admin-search" type="text" placeholder="Search name..." class="border rounded px-3 py-2 w-64" autocomplete="off">
+      <select id="admin-filter-role" class="border rounded px-2 py-2">
+        <option value="">All roles</option>
+        {% for r in allowed_roles %}
+        <option value="{{ r }}">{{ r }}</option>
+        {% endfor %}
+      </select>
+    </div>
   </div>
   <div class="flex items-center justify-between mb-3">
     <div class="text-sm text-gray-600">Bulk actions</div>
@@ -68,15 +76,15 @@
     <table id="admin-table" class="w-full table-auto border border-gray-300 rounded-md overflow-hidden">
       <thead class="bg-gray-100 text-gray-700">
         <tr>
-          <th class="p-3 text-left">Name</th>
-          <th class="p-3 text-left">Role</th>
-          <th class="p-3 text-left">Supervisor</th>
-          <th class="p-3 text-left">Self schedule</th>
-          <th class="p-3 text-center">Self</th>
-          <th class="p-3 text-center">Supervisor</th>
-          <th class="p-3 text-center">Director</th>
-          <th class="p-3 text-center">Email</th>
-          <th class="p-3 text-center">Clicked</th>
+          <th class="p-3 text-left cursor-pointer select-none" data-sort="name">Name<span class="ml-1 sort-indicator"></span></th>
+          <th class="p-3 text-left cursor-pointer select-none" data-sort="role">Role<span class="ml-1 sort-indicator"></span></th>
+          <th class="p-3 text-left cursor-pointer select-none" data-sort="supervisor">Supervisor<span class="ml-1 sort-indicator"></span></th>
+          <th class="p-3 text-left cursor-pointer select-none" data-sort="schedule">Self schedule<span class="ml-1 sort-indicator"></span></th>
+          <th class="p-3 text-center cursor-pointer select-none" data-sort="self_done">Self<span class="ml-1 sort-indicator"></span></th>
+          <th class="p-3 text-center cursor-pointer select-none" data-sort="supervisor_done">Supervisor<span class="ml-1 sort-indicator"></span></th>
+          <th class="p-3 text-center cursor-pointer select-none" data-sort="director_done">Director<span class="ml-1 sort-indicator"></span></th>
+          <th class="p-3 text-center cursor-pointer select-none" data-sort="email">Email<span class="ml-1 sort-indicator"></span></th>
+          <th class="p-3 text-center cursor-pointer select-none" data-sort="clicked">Clicked<span class="ml-1 sort-indicator"></span></th>
           <th class="p-3 text-center sticky right-0 bg-gray-100">Action</th>
         </tr>
       </thead>
@@ -297,19 +305,95 @@
 
       // Name filter
       var search = document.getElementById('admin-search');
+      var roleFilter = document.getElementById('admin-filter-role');
       var tbody = document.querySelector('#admin-table tbody');
       function applyFilter() {
         var q = (search.value || '').toLowerCase().trim();
+        var roleq = (roleFilter && roleFilter.value) ? roleFilter.value.toLowerCase().trim() : '';
         if (!tbody) return;
         tbody.querySelectorAll('tr').forEach(function(row){
           var nameCell = row.querySelector('td');
           var name = nameCell ? (nameCell.textContent || '').toLowerCase() : '';
-          row.style.display = !q || name.indexOf(q) !== -1 ? '' : 'none';
+          var showByName = !q || name.indexOf(q) !== -1;
+          var roleDisp = row.querySelector('.role-display');
+          var roleTxt = roleDisp ? ((roleDisp.textContent || '').toLowerCase().trim()) : '';
+          var showByRole = !roleq || roleTxt === roleq;
+          row.style.display = (showByName && showByRole) ? '' : 'none';
         });
       }
       if (search) {
         search.addEventListener('input', applyFilter);
       }
+      if (roleFilter) {
+        roleFilter.addEventListener('change', applyFilter);
+      }
+      applyFilter();
+
+      // Sorting
+      var currentSort = { key: null, dir: 1 };
+      function getCellValue(row, key) {
+        switch (key) {
+          case 'name':
+            return (row.querySelector('td:nth-child(1)')?.textContent || '').trim().toLowerCase();
+          case 'role':
+            return (row.querySelector('.role-display')?.textContent || '').trim().toLowerCase();
+          case 'supervisor':
+            return (row.querySelector('.sup-display')?.textContent || '').trim().toLowerCase();
+          case 'schedule':
+            // Use ISO value if available in hidden input value attr on the row
+            var inp = row.querySelector('input[data-sched-input]');
+            return (inp && inp.value) ? inp.value : (row.querySelector('.sched-display')?.textContent || '').trim();
+          case 'self_done':
+            return row.querySelector('td:nth-child(5)')?.textContent.indexOf('✅') !== -1 ? 1 : 0;
+          case 'supervisor_done':
+            return row.querySelector('td:nth-child(6)')?.textContent.indexOf('✅') !== -1 ? 1 : 0;
+          case 'director_done':
+            return row.querySelector('td:nth-child(7)')?.textContent.indexOf('✅') !== -1 ? 1 : 0;
+          case 'email':
+            return row.querySelector('td:nth-child(8)')?.textContent.indexOf('📧') !== -1 ? 1 : 0;
+          case 'clicked':
+            return row.querySelector('td:nth-child(9)')?.textContent.indexOf('🟢') !== -1 ? 1 : 0;
+          default:
+            return '';
+        }
+      }
+      function compare(a, b, key, dir) {
+        var va = getCellValue(a, key);
+        var vb = getCellValue(b, key);
+        // Try numeric/boolean compare when both are numbers
+        if (typeof va === 'number' && typeof vb === 'number') {
+          return (va - vb) * dir;
+        }
+        // Date-like values: ISO yyyy-mm-ddThh:mm sort as string is fine
+        va = (va || '').toString();
+        vb = (vb || '').toString();
+        if (va < vb) return -1 * dir;
+        if (va > vb) return 1 * dir;
+        return 0;
+      }
+      function setSortIndicator(th, dir) {
+        document.querySelectorAll('th[data-sort] .sort-indicator').forEach(function(el){ el.textContent = ''; });
+        var span = th.querySelector('.sort-indicator');
+        if (span) span.textContent = dir === 1 ? '▲' : '▼';
+      }
+      document.querySelectorAll('th[data-sort]').forEach(function(th){
+        th.addEventListener('click', function(){
+          var key = th.getAttribute('data-sort');
+          if (!key) return;
+          var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+          // Toggle direction if same key
+          if (currentSort.key === key) {
+            currentSort.dir = -currentSort.dir;
+          } else {
+            currentSort.key = key;
+            currentSort.dir = 1;
+          }
+          rows.sort(function(a, b){ return compare(a, b, key, currentSort.dir); });
+          // Re-append in sorted order
+          rows.forEach(function(r){ tbody.appendChild(r); });
+          setSortIndicator(th, currentSort.dir);
+        });
+      });
 
       // Confirm bulk sends
       document.querySelectorAll('form[data-confirm]').forEach(function(f){
