@@ -25,16 +25,184 @@
     <button class="bg-gray-100 px-3 py-2 rounded hover:bg-gray-200">Load</button>
   </form>
 
-  <p class="text-sm text-gray-600">Edit the JSON below and click Save. Fields: id (int), question (str), type (scale|yesno|text), category (str), optional category_description, controls_group/depends_on_group/depends_on_value for conditional blocks.</p>
+  <div class="flex items-center justify-between">
+    <p class="text-sm text-gray-600">Use the simple editor to reorder (drag), edit, add or remove questions. You can still switch to raw JSON if needed.</p>
+    <div class="space-x-2">
+      <button type="button" id="switch-to-editor" class="bg-gray-100 text-gray-800 px-3 py-2 rounded hover:bg-gray-200" style="display:none;">Simple editor</button>
+      <button type="button" id="switch-to-json" class="bg-gray-100 text-gray-800 px-3 py-2 rounded hover:bg-gray-200">Raw JSON</button>
+    </div>
+  </div>
 
-  <form method="post" action="/admin/questions" class="space-y-3">
+  <form method="post" action="/admin/questions" class="space-y-3" id="questions-form">
     <input type="hidden" name="role" value="{{ role }}">
-    <textarea name="json" rows="22" class="w-full border border-gray-300 p-3 rounded" spellcheck="false">{{ json_text }}</textarea>
+
+    <div id="simple-editor" class="space-y-3">
+      <div class="flex items-center justify-between">
+        <div class="text-sm text-gray-600">Drag the handle to reorder. Click "Advanced" for optional fields.</div>
+        <div class="space-x-2">
+          <button type="button" id="add-row" class="bg-gray-100 text-gray-800 px-3 py-2 rounded hover:bg-gray-200">Add question</button>
+        </div>
+      </div>
+      <div class="overflow-x-auto border border-gray-200 rounded">
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="p-2 text-left w-8">↕</th>
+              <th class="p-2 text-left w-20">ID</th>
+              <th class="p-2 text-left w-40">Type</th>
+              <th class="p-2 text-left">Question</th>
+              <th class="p-2 text-left w-56">Category</th>
+              <th class="p-2 text-left w-24">Advanced</th>
+              <th class="p-2 text-left w-16">Del</th>
+            </tr>
+          </thead>
+          <tbody id="rows-body" class="divide-y"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <textarea id="json-textarea" name="json" rows="22" class="w-full border border-gray-300 p-3 rounded" spellcheck="false" style="display:none;">{{ json_text }}</textarea>
     <div class="text-right">
-      <button class="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700">Save</button>
-      <button type="submit" formaction="/admin/questions/preview" formmethod="post" formtarget="_blank" class="ml-2 bg-gray-100 text-gray-800 px-5 py-2 rounded hover:bg-gray-200">Preview</button>
+      <button class="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700" id="save-btn">Save</button>
+      <button type="submit" formaction="/admin/questions/preview" formmethod="post" formtarget="_blank" class="ml-2 bg-gray-100 text-gray-800 px-5 py-2 rounded hover:bg-gray-200" id="preview-btn">Preview</button>
     </div>
   </form>
+
+  <script>
+    (function() {
+      var jsonTextarea = document.getElementById('json-textarea');
+      var editor = document.getElementById('simple-editor');
+      var switchToJson = document.getElementById('switch-to-json');
+      var switchToEditor = document.getElementById('switch-to-editor');
+      var body = document.getElementById('rows-body');
+      var addRowBtn = document.getElementById('add-row');
+      var form = document.getElementById('questions-form');
+      function parseJson() {
+        try { return JSON.parse(jsonTextarea.value || '[]'); } catch(_) { return []; }
+      }
+      function sanitizeRow(r) {
+        var out = {
+          id: parseInt(r.id, 10) || 0,
+          question: (r.question || '').trim(),
+          type: (r.type || 'scale').trim(),
+          category: (r.category || '').trim()
+        };
+        if (r.category_description) out.category_description = (r.category_description || '').trim();
+        if (r.controls_group) out.controls_group = (r.controls_group || '').trim();
+        if (r.depends_on_group) out.depends_on_group = (r.depends_on_group || '').trim();
+        if (r.depends_on_value) out.depends_on_value = (r.depends_on_value || '').trim();
+        return out;
+      }
+      function buildJsonFromTable() {
+        var rows = [];
+        body.querySelectorAll('tr[data-row]').forEach(function(tr){
+          var get = function(sel){ var el=tr.querySelector(sel); return el ? el.value : ''; };
+          var row = {
+            id: get('input[name="id"]'),
+            question: get('input[name="question"]'),
+            type: get('select[name="type"]'),
+            category: get('input[name="category"]'),
+            category_description: get('input[name="category_description"]'),
+            controls_group: get('input[name="controls_group"]'),
+            depends_on_group: get('input[name="depends_on_group"]'),
+            depends_on_value: get('input[name="depends_on_value"]'),
+          };
+          rows.push(sanitizeRow(row));
+        });
+        jsonTextarea.value = JSON.stringify(rows, null, 2);
+      }
+      function renderRow(r) {
+        var tr = document.createElement('tr');
+        tr.setAttribute('data-row', '1');
+        tr.setAttribute('draggable', 'true');
+        tr.innerHTML = ''
+          + '<td class="p-2 cursor-move text-gray-400">⋮⋮</td>'
+          + '<td class="p-2"><input name="id" type="number" class="border rounded px-2 py-1 w-full" value="' + (r.id || '') + '"></td>'
+          + '<td class="p-2">'
+            + '<select name="type" class="border rounded px-2 py-1 w-full">'
+              + '<option value="scale"' + (r.type === 'scale' ? ' selected' : '') + '>scale</option>'
+              + '<option value="yesno"' + (r.type === 'yesno' ? ' selected' : '') + '>yesno</option>'
+              + '<option value="text"' + (r.type === 'text' ? ' selected' : '') + '>text</option>'
+            + '</select>'
+          + '</td>'
+          + '<td class="p-2"><input name="question" type="text" class="border rounded px-2 py-1 w-full" value="' + (r.question || '') .replace(/"/g, '&quot;') + '"></td>'
+          + '<td class="p-2"><input name="category" type="text" class="border rounded px-2 py-1 w-full" value="' + (r.category || '') .replace(/"/g, '&quot;') + '"></td>'
+          + '<td class="p-2">'
+            + '<button type="button" class="adv-btn bg-gray-100 px-2 py-1 rounded">Advanced</button>'
+          + '</td>'
+          + '<td class="p-2">'
+            + '<button type="button" class="del-btn text-red-600">✖</button>'
+          + '</td>'
+          + '<td class="p-2" style="display:none;" colspan="7">'
+            + '<div class="grid grid-cols-2 gap-2">'
+              + '<input name="category_description" placeholder="category_description" class="border rounded px-2 py-1" value="' + (r.category_description || '') .replace(/"/g, '&quot;') + '">'
+              + '<input name="controls_group" placeholder="controls_group" class="border rounded px-2 py-1" value="' + (r.controls_group || '') .replace(/"/g, '&quot;') + '">'
+              + '<input name="depends_on_group" placeholder="depends_on_group" class="border rounded px-2 py-1" value="' + (r.depends_on_group || '') .replace(/"/g, '&quot;') + '">'
+              + '<input name="depends_on_value" placeholder="depends_on_value" class="border rounded px-2 py-1" value="' + (r.depends_on_value || '') .replace(/"/g, '&quot;') + '">'
+            + '</div>'
+          + '</td>';
+        // events
+        tr.querySelector('.del-btn').addEventListener('click', function(){ tr.remove(); });
+        tr.querySelector('.adv-btn').addEventListener('click', function(){
+          var adv = tr.lastElementChild;
+          adv.style.display = adv.style.display === 'none' ? '' : 'none';
+        });
+        tr.addEventListener('dragstart', function(e){
+          e.dataTransfer.setData('text/plain', 'dragging');
+          tr.classList.add('bg-yellow-50');
+          window.__dragging = tr;
+        });
+        tr.addEventListener('dragend', function(){
+          tr.classList.remove('bg-yellow-50');
+          window.__dragging = null;
+        });
+        tr.addEventListener('dragover', function(e){
+          e.preventDefault();
+          var dragging = window.__dragging;
+          if (!dragging || dragging === tr) return;
+          var rect = tr.getBoundingClientRect();
+          var before = (e.clientY - rect.top) < rect.height / 2;
+          if (before) tr.parentNode.insertBefore(dragging, tr);
+          else tr.parentNode.insertBefore(dragging, tr.nextSibling);
+        });
+        body.appendChild(tr);
+      }
+      function renderTable(data) {
+        body.innerHTML = '';
+        data.forEach(function(item){ renderRow(item); });
+      }
+      // init
+      renderTable(parseJson());
+      addRowBtn.addEventListener('click', function(){
+        // Auto id: max+1
+        var ids = [];
+        body.querySelectorAll('input[name="id"]').forEach(function(i){ ids.push(parseInt(i.value||'0',10)||0); });
+        var nextId = (ids.length ? Math.max.apply(null, ids) : 0) + 1;
+        renderRow({ id: nextId, type: 'scale', question: '', category: '' });
+      });
+      switchToJson.addEventListener('click', function(){
+        buildJsonFromTable();
+        editor.style.display = 'none';
+        jsonTextarea.style.display = '';
+        switchToJson.style.display = 'none';
+        switchToEditor.style.display = '';
+      });
+      switchToEditor.addEventListener('click', function(){
+        editor.style.display = '';
+        jsonTextarea.style.display = 'none';
+        switchToJson.style.display = '';
+        switchToEditor.style.display = 'none';
+        // Re-render from textarea in case it changed
+        renderTable(parseJson());
+      });
+      // Hook form submissions to sync JSON
+      form.addEventListener('submit', function(){
+        if (editor.style.display !== 'none') {
+          buildJsonFromTable();
+        }
+      });
+    })();
+  </script>
 </div>
 {% endblock %}
 

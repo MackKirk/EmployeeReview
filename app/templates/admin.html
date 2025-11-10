@@ -84,9 +84,9 @@
         <tr class="hover:bg-gray-50">
           <td class="p-3 font-medium">{{ row.employee.name }}</td>
           <td class="p-3">
-            <form method="post" action="/admin/update-employee/{{ row.employee.id }}" class="flex items-center space-x-2" data-emp-id="{{ row.employee.id }}">
+            <form id="row-form-{{ row.employee.id }}" method="post" action="/admin/update-employee/{{ row.employee.id }}" class="flex items-center space-x-2" data-emp-id="{{ row.employee.id }}">
               <span class="role-display" data-emp-id="{{ row.employee.id }}">{{ row.employee.role }}</span>
-              <select name="role" class="border rounded px-2 py-1" style="display:none;" disabled data-role-select data-emp-id="{{ row.employee.id }}">
+              <select name="role" class="border rounded px-2 py-1" style="display:none;" disabled data-role-select data-emp-id="{{ row.employee.id }}" form="row-form-{{ row.employee.id }}">
                 {% for r in allowed_roles %}
                   <option value="{{ r }}" {% if row.employee.role == r %}selected{% endif %}>{{ r }}</option>
                 {% endfor %}
@@ -94,7 +94,7 @@
           </td>
           <td class="p-3">
               <span class="sup-display" data-emp-id="{{ row.employee.id }}">{{ row.employee.supervisor_email or '—' }}</span>
-              <select name="supervisor_name" class="border rounded px-2 py-1 w-56" style="display:none;" disabled data-sup-select data-emp-id="{{ row.employee.id }}">
+              <select name="supervisor_name" class="border rounded px-2 py-1 w-56" style="display:none;" disabled data-sup-select data-emp-id="{{ row.employee.id }}" form="row-form-{{ row.employee.id }}">
                 <option value="">None</option>
                 {% for n in names %}
                   <option value="{{ n }}" {% if row.employee.supervisor_email == n %}selected{% endif %}>{{ n }}</option>
@@ -110,7 +110,8 @@
                      style="display:none;"
                      disabled
                      data-sched-input
-                     data-emp-id="{{ row.employee.id }}">
+                     data-emp-id="{{ row.employee.id }}"
+                     form="row-form-{{ row.employee.id }}">
           </td>
           <td class="p-3 text-center">{% if row.employee_done %}✅{% else %}❌{% endif %}</td>
           <td class="p-3 text-center">{% if row.supervisor_done %}✅{% else %}❌{% endif %}</td>
@@ -119,7 +120,7 @@
           <td class="p-3 text-center">{% if row.has_clicked %}🟢{% else %}—{% endif %}</td>
           <td class="p-3 text-center sticky right-0 bg-white">
               <button type="button" class="edit-row text-gray-700 hover:text-black" title="Edit" data-emp-id="{{ row.employee.id }}">✏️</button>
-              <button type="submit" class="save-row ml-2 bg-gray-100 px-2 py-1 rounded hover:bg-gray-200" style="display:none;" title="Save" data-emp-id="{{ row.employee.id }}">💾</button>
+              <button type="submit" class="save-row ml-2 bg-gray-100 px-2 py-1 rounded hover:bg-gray-200" style="display:none;" title="Save" data-emp-id="{{ row.employee.id }}" form="row-form-{{ row.employee.id }}">💾</button>
             </form>
             <form method="post" action="/admin/send-review-link/{{ row.employee.id }}" class="inline">
               <button class="ml-2" title="Send email">✉️</button>
