@@ -16,14 +16,50 @@
   {% endif %}
 
   <form method="post" action="/admin/ui" class="space-y-6">
-    <div>
-      <label class="block font-semibold mb-1">Rating panel HTML</label>
-      <textarea name="rating_panel_html" rows="14" class="w-full border border-gray-300 p-3 rounded" spellcheck="false">{{ rating_panel_html }}</textarea>
+    <div class="html-block" data-name="rating_panel_html">
+      <div class="flex items-center justify-between">
+        <label class="block font-semibold mb-1">Rating panel HTML</label>
+        <div class="space-x-2">
+          <button type="button" class="toggle-editor bg-gray-100 text-gray-800 px-3 py-1 rounded hover:bg-gray-200" data-mode="editor">Simple editor</button>
+          <button type="button" class="toggle-editor bg-gray-100 text-gray-800 px-3 py-1 rounded hover:bg-gray-200" data-mode="raw" style="display:none;">Raw HTML</button>
+        </div>
+      </div>
+      <div class="toolbar flex flex-wrap items-center gap-1 mb-2" style="display:none;">
+        <button type="button" class="tb px-2 py-1 border rounded" data-cmd="bold"><b>B</b></button>
+        <button type="button" class="tb px-2 py-1 border rounded" data-cmd="italic"><i>I</i></button>
+        <button type="button" class="tb px-2 py-1 border rounded" data-cmd="insertUnorderedList">• List</button>
+        <button type="button" class="tb px-2 py-1 border rounded" data-cmd="insertOrderedList">1. List</button>
+        <button type="button" class="tb px-2 py-1 border rounded" data-cmd="createLink">Link</button>
+        <button type="button" class="tb px-2 py-1 border rounded" data-cmd="formatBlock" data-value="H2">H2</button>
+        <button type="button" class="tb px-2 py-1 border rounded" data-cmd="formatBlock" data-value="H3">H3</button>
+        <button type="button" class="tb px-2 py-1 border rounded" data-cmd="formatBlock" data-value="P">P</button>
+        <button type="button" class="tb px-2 py-1 border rounded" data-cmd="removeFormat">Clear</button>
+      </div>
+      <div class="editor border border-gray-300 rounded p-3 min-h-[220px]" contenteditable="true" style="display:none;"></div>
+      <textarea name="rating_panel_html" rows="14" class="raw w-full border border-gray-300 p-3 rounded" spellcheck="false">{{ rating_panel_html }}</textarea>
       <p class="text-xs text-gray-500 mt-1">Tip: Only the inner content of the floating panel. The container and position are fixed by the app.</p>
     </div>
-    <div>
-      <label class="block font-semibold mb-1">Instructions modal HTML</label>
-      <textarea name="instructions_html" rows="10" class="w-full border border-gray-300 p-3 rounded" spellcheck="false">{{ instructions_html }}</textarea>
+    <div class="html-block" data-name="instructions_html">
+      <div class="flex items-center justify-between">
+        <label class="block font-semibold mb-1">Instructions modal HTML</label>
+        <div class="space-x-2">
+          <button type="button" class="toggle-editor bg-gray-100 text-gray-800 px-3 py-1 rounded hover:bg-gray-200" data-mode="editor">Simple editor</button>
+          <button type="button" class="toggle-editor bg-gray-100 text-gray-800 px-3 py-1 rounded hover:bg-gray-200" data-mode="raw" style="display:none;">Raw HTML</button>
+        </div>
+      </div>
+      <div class="toolbar flex flex-wrap items-center gap-1 mb-2" style="display:none;">
+        <button type="button" class="tb px-2 py-1 border rounded" data-cmd="bold"><b>B</b></button>
+        <button type="button" class="tb px-2 py-1 border rounded" data-cmd="italic"><i>I</i></button>
+        <button type="button" class="tb px-2 py-1 border rounded" data-cmd="insertUnorderedList">• List</button>
+        <button type="button" class="tb px-2 py-1 border rounded" data-cmd="insertOrderedList">1. List</button>
+        <button type="button" class="tb px-2 py-1 border rounded" data-cmd="createLink">Link</button>
+        <button type="button" class="tb px-2 py-1 border rounded" data-cmd="formatBlock" data-value="H2">H2</button>
+        <button type="button" class="tb px-2 py-1 border rounded" data-cmd="formatBlock" data-value="H3">H3</button>
+        <button type="button" class="tb px-2 py-1 border rounded" data-cmd="formatBlock" data-value="P">P</button>
+        <button type="button" class="tb px-2 py-1 border rounded" data-cmd="removeFormat">Clear</button>
+      </div>
+      <div class="editor border border-gray-300 rounded p-3 min-h-[180px]" contenteditable="true" style="display:none;"></div>
+      <textarea name="instructions_html" rows="10" class="raw w-full border border-gray-300 p-3 rounded" spellcheck="false">{{ instructions_html }}</textarea>
       <p class="text-xs text-gray-500 mt-1">Tip: The Accept button is added by the app. Provide headings/paragraphs/lists as needed.</p>
     </div>
 
@@ -34,14 +70,54 @@
         <div>
           <label class="block font-semibold mb-1">Employee email subject</label>
           <input type="text" name="employee_email_subject" class="w-full border border-gray-300 p-2 rounded" value="{{ employee_email_subject or '' }}" placeholder="Employee Review Notice">
-          <label class="block font-semibold mb-1 mt-2">Employee email HTML</label>
-          <textarea name="employee_email_html" rows="10" class="w-full border border-gray-300 p-3 rounded" placeholder="Custom HTML body for employee">{{ employee_email_html or '' }}</textarea>
+          <div class="html-block mt-2" data-name="employee_email_html">
+            <div class="flex items-center justify-between">
+              <label class="block font-semibold">Employee email HTML</label>
+              <div class="space-x-2">
+                <button type="button" class="toggle-editor bg-gray-100 text-gray-800 px-3 py-1 rounded hover:bg-gray-200" data-mode="editor">Simple editor</button>
+                <button type="button" class="toggle-editor bg-gray-100 text-gray-800 px-3 py-1 rounded hover:bg-gray-200" data-mode="raw" style="display:none;">Raw HTML</button>
+              </div>
+            </div>
+            <div class="toolbar flex flex-wrap items-center gap-1 mb-2" style="display:none;">
+              <button type="button" class="tb px-2 py-1 border rounded" data-cmd="bold"><b>B</b></button>
+              <button type="button" class="tb px-2 py-1 border rounded" data-cmd="italic"><i>I</i></button>
+              <button type="button" class="tb px-2 py-1 border rounded" data-cmd="insertUnorderedList">• List</button>
+              <button type="button" class="tb px-2 py-1 border rounded" data-cmd="insertOrderedList">1. List</button>
+              <button type="button" class="tb px-2 py-1 border rounded" data-cmd="createLink">Link</button>
+              <button type="button" class="tb px-2 py-1 border rounded" data-cmd="formatBlock" data-value="H2">H2</button>
+              <button type="button" class="tb px-2 py-1 border rounded" data-cmd="formatBlock" data-value="H3">H3</button>
+              <button type="button" class="tb px-2 py-1 border rounded" data-cmd="formatBlock" data-value="P">P</button>
+              <button type="button" class="tb px-2 py-1 border rounded" data-cmd="removeFormat">Clear</button>
+            </div>
+            <div class="editor border border-gray-300 rounded p-3 min-h-[180px]" contenteditable="true" style="display:none;"></div>
+            <textarea name="employee_email_html" rows="10" class="raw w-full border border-gray-300 p-3 rounded" placeholder="Custom HTML body for employee">{{ employee_email_html or '' }}</textarea>
+          </div>
         </div>
         <div>
           <label class="block font-semibold mb-1">Supervisor email subject</label>
           <input type="text" name="supervisor_email_subject" class="w-full border border-gray-300 p-2 rounded" value="{{ supervisor_email_subject or '' }}" placeholder="Supervisor Review Notice">
-          <label class="block font-semibold mb-1 mt-2">Supervisor email HTML</label>
-          <textarea name="supervisor_email_html" rows="10" class="w-full border border-gray-300 p-3 rounded" placeholder="Custom HTML body for supervisor">{{ supervisor_email_html or '' }}</textarea>
+          <div class="html-block mt-2" data-name="supervisor_email_html">
+            <div class="flex items-center justify-between">
+              <label class="block font-semibold">Supervisor email HTML</label>
+              <div class="space-x-2">
+                <button type="button" class="toggle-editor bg-gray-100 text-gray-800 px-3 py-1 rounded hover:bg-gray-200" data-mode="editor">Simple editor</button>
+                <button type="button" class="toggle-editor bg-gray-100 text-gray-800 px-3 py-1 rounded hover:bg-gray-200" data-mode="raw" style="display:none;">Raw HTML</button>
+              </div>
+            </div>
+            <div class="toolbar flex flex-wrap items-center gap-1 mb-2" style="display:none;">
+              <button type="button" class="tb px-2 py-1 border rounded" data-cmd="bold"><b>B</b></button>
+              <button type="button" class="tb px-2 py-1 border rounded" data-cmd="italic"><i>I</i></button>
+              <button type="button" class="tb px-2 py-1 border rounded" data-cmd="insertUnorderedList">• List</button>
+              <button type="button" class="tb px-2 py-1 border rounded" data-cmd="insertOrderedList">1. List</button>
+              <button type="button" class="tb px-2 py-1 border rounded" data-cmd="createLink">Link</button>
+              <button type="button" class="tb px-2 py-1 border rounded" data-cmd="formatBlock" data-value="H2">H2</button>
+              <button type="button" class="tb px-2 py-1 border rounded" data-cmd="formatBlock" data-value="H3">H3</button>
+              <button type="button" class="tb px-2 py-1 border rounded" data-cmd="formatBlock" data-value="P">P</button>
+              <button type="button" class="tb px-2 py-1 border rounded" data-cmd="removeFormat">Clear</button>
+            </div>
+            <div class="editor border border-gray-300 rounded p-3 min-h-[180px]" contenteditable="true" style="display:none;"></div>
+            <textarea name="supervisor_email_html" rows="10" class="raw w-full border border-gray-300 p-3 rounded" placeholder="Custom HTML body for supervisor">{{ supervisor_email_html or '' }}</textarea>
+          </div>
         </div>
       </div>
       <p class="text-xs text-gray-500 mt-2">Placeholders available: {{ '{name}' }} (recipient first name), {{ '{self_link}' }}, {{ '{supervisor_link}' }}, {{ '{base_url}' }}.</p>
@@ -51,6 +127,64 @@
       <button type="submit" formaction="/admin/ui/preview" formmethod="post" formtarget="_blank" class="ml-2 bg-gray-100 text-gray-800 px-5 py-2 rounded hover:bg-gray-200">Preview</button>
     </div>
   </form>
+  <script>
+    (function(){
+      function setupBlock(block){
+        var editor = block.querySelector('.editor');
+        var textarea = block.querySelector('textarea.raw');
+        var toolbar = block.querySelector('.toolbar');
+        var btnEditor = block.querySelector('.toggle-editor[data-mode="editor"]');
+        var btnRaw = block.querySelector('.toggle-editor[data-mode="raw"]');
+        if (!editor || !textarea || !btnEditor || !btnRaw) return;
+        editor.innerHTML = textarea.value || '';
+        btnEditor.addEventListener('click', function(){
+          editor.style.display = '';
+          textarea.style.display = 'none';
+          if (toolbar) toolbar.style.display = 'flex';
+          btnEditor.style.display = 'none';
+          btnRaw.style.display = '';
+        });
+        btnRaw.addEventListener('click', function(){
+          textarea.value = editor.innerHTML;
+          editor.style.display = 'none';
+          textarea.style.display = '';
+          if (toolbar) toolbar.style.display = 'none';
+          btnEditor.style.display = '';
+          btnRaw.style.display = 'none';
+        });
+        (block.querySelectorAll('.tb') || []).forEach(function(b){
+          b.addEventListener('click', function(){
+            var cmd = b.getAttribute('data-cmd');
+            var val = b.getAttribute('data-value');
+            if (cmd === 'createLink') {
+              var url = prompt('Enter URL (https://...)');
+              if (url) document.execCommand('createLink', false, url);
+              return;
+            }
+            if (cmd === 'formatBlock') {
+              document.execCommand('formatBlock', false, val || 'P');
+              return;
+            }
+            document.execCommand(cmd, false, null);
+          });
+        });
+      }
+      document.querySelectorAll('.html-block').forEach(setupBlock);
+      // Sync editors back on submit
+      var form = document.querySelector('form[action="/admin/ui"]');
+      if (form) {
+        form.addEventListener('submit', function(){
+          document.querySelectorAll('.html-block').forEach(function(block){
+            var ed = block.querySelector('.editor');
+            var ta = block.querySelector('textarea.raw');
+            if (ed && ta && ed.style.display !== 'none') {
+              ta.value = ed.innerHTML;
+            }
+          });
+        });
+      }
+    })();
+  </script>
 </div>
 {% endblock %}
 
