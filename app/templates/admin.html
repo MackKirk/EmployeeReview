@@ -50,6 +50,14 @@
   <div class="flex justify-end mb-3">
     <input id="admin-search" type="text" placeholder="Search name..." class="border rounded px-3 py-2 w-64" autocomplete="off">
   </div>
+  <div class="flex items-center justify-between mb-3">
+    <div class="text-sm text-gray-600">Bulk actions</div>
+    <div class="space-x-2">
+      <button id="bulk-edit-sup" type="button" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200">Bulk edit supervisors</button>
+      <button id="bulk-save-sup" type="button" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" style="display:none;">Save all</button>
+      <button id="bulk-cancel-sup" type="button" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200" style="display:none;">Cancel</button>
+    </div>
+  </div>
 
   <div class="overflow-x-auto">
     <table id="admin-table" class="w-full table-auto border border-gray-300 rounded-md overflow-hidden">
@@ -58,6 +66,7 @@
           <th class="p-3 text-left">Name</th>
           <th class="p-3 text-left">Role</th>
           <th class="p-3 text-left">Supervisor</th>
+          <th class="p-3 text-left">Self schedule</th>
           <th class="p-3 text-center">Self</th>
           <th class="p-3 text-center">Supervisor</th>
           <th class="p-3 text-center">Director</th>
@@ -88,6 +97,17 @@
                 {% endfor %}
               </select>
           </td>
+          <td class="p-3">
+              <span class="sched-display text-gray-700" data-emp-id="{{ row.employee.id }}">{{ row.self_scheduled_at_display or '—' }}</span>
+              <input type="datetime-local"
+                     name="self_scheduled_at"
+                     value="{{ row.self_scheduled_at_value }}"
+                     class="border rounded px-2 py-1"
+                     style="display:none;"
+                     disabled
+                     data-sched-input
+                     data-emp-id="{{ row.employee.id }}">
+          </td>
           <td class="p-3 text-center">{% if row.employee_done %}✅{% else %}❌{% endif %}</td>
           <td class="p-3 text-center">{% if row.supervisor_done %}✅{% else %}❌{% endif %}</td>
           <td class="p-3 text-center">{% if row.director_done %}✅{% else %}❌{% endif %}</td>
@@ -116,25 +136,33 @@
         var roleSel = document.querySelector('select[data-role-select][data-emp-id="' + empId + '"]');
         var supDisp = document.querySelector('.sup-display[data-emp-id="' + empId + '"]');
         var supSel = document.querySelector('select[data-sup-select][data-emp-id="' + empId + '"]');
+        var schedDisp = document.querySelector('.sched-display[data-emp-id="' + empId + '"]');
+        var schedInp = document.querySelector('input[data-sched-input][data-emp-id="' + empId + '"]');
         var saveBtn = document.querySelector('button.save-row[data-emp-id="' + empId + '"]');
         var editBtn = document.querySelector('button.edit-row[data-emp-id="' + empId + '"]');
         if (!roleDisp || !roleSel || !supDisp || !supSel || !saveBtn || !editBtn) return;
         if (editing) {
           roleDisp.style.display = 'none';
           supDisp.style.display = 'none';
+          if (schedDisp) schedDisp.style.display = 'none';
           roleSel.style.display = '';
           supSel.style.display = '';
+          if (schedInp) schedInp.style.display = '';
           roleSel.disabled = false;
           supSel.disabled = false;
+          if (schedInp) schedInp.disabled = false;
           saveBtn.style.display = '';
           editBtn.style.display = 'none';
         } else {
           roleDisp.style.display = '';
           supDisp.style.display = '';
+          if (schedDisp) schedDisp.style.display = '';
           roleSel.style.display = 'none';
           supSel.style.display = 'none';
+          if (schedInp) schedInp.style.display = 'none';
           roleSel.disabled = true;
           supSel.disabled = true;
+          if (schedInp) schedInp.disabled = true;
           saveBtn.style.display = 'none';
           editBtn.style.display = '';
           // Update display text with current selections
@@ -142,6 +170,11 @@
           roleDisp.textContent = roleText;
           var supText = supSel.options[supSel.selectedIndex] ? supSel.options[supSel.selectedIndex].textContent : '—';
           supDisp.textContent = supText || '—';
+          if (schedDisp && schedInp) {
+            // Convert value "YYYY-MM-DDTHH:MM" to "YYYY-MM-DD HH:MM"
+            var v = schedInp.value || '';
+            schedDisp.textContent = v ? v.replace('T', ' ') : '—';
+          }
         }
       }
       document.querySelectorAll('button.edit-row').forEach(function(btn){
@@ -150,6 +183,62 @@
           toggleEdit(id, true);
         });
       });
+
+      // Bulk edit supervisors
+      var bulkBtn = document.getElementById('bulk-edit-sup');
+      var bulkSave = document.getElementById('bulk-save-sup');
+      var bulkCancel = document.getElementById('bulk-cancel-sup');
+      var bulkMode = false;
+      function setBulkMode(on) {
+        bulkMode = !!on;
+        bulkBtn.style.display = on ? 'none' : '';
+        bulkSave.style.display = on ? '' : 'none';
+        bulkCancel.style.display = on ? '' : 'none';
+        var rows = document.querySelectorAll('#admin-table tbody tr');
+        rows.forEach(function(row){
+          var empId = row.querySelector('button.edit-row')?.getAttribute('data-emp-id');
+          if (!empId) return;
+          var supDisp = row.querySelector('.sup-display[data-emp-id="' + empId + '"]');
+          var supSel = row.querySelector('select[data-sup-select][data-emp-id="' + empId + '"]');
+          if (!supDisp || !supSel) return;
+          if (on) {
+            supDisp.style.display = 'none';
+            supSel.style.display = '';
+            supSel.disabled = false;
+          } else {
+            supDisp.style.display = '';
+            supSel.style.display = 'none';
+            supSel.disabled = true;
+          }
+        });
+      }
+      if (bulkBtn) {
+        bulkBtn.addEventListener('click', function(){ setBulkMode(true); });
+      }
+      if (bulkCancel) {
+        bulkCancel.addEventListener('click', function(){ setBulkMode(false); });
+      }
+      if (bulkSave) {
+        bulkSave.addEventListener('click', function(){
+          // Create a temporary form and submit all supervisor values
+          var form = document.createElement('form');
+          form.method = 'post';
+          form.action = '/admin/bulk-update-supervisors';
+          var rows = document.querySelectorAll('#admin-table tbody tr');
+          rows.forEach(function(row){
+            var empId = row.querySelector('button.edit-row')?.getAttribute('data-emp-id');
+            var supSel = row.querySelector('select[data-sup-select][data-emp-id="' + empId + '"]');
+            if (!empId || !supSel) return;
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'supervisor_name[' + empId + ']';
+            input.value = supSel.value || '';
+            form.appendChild(input);
+          });
+          document.body.appendChild(form);
+          form.submit();
+        });
+      }
 
       // Name filter
       var search = document.getElementById('admin-search');

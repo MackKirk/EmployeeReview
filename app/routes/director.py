@@ -10,6 +10,8 @@ from app.utils.auth_utils import generate_magic_login_token
 import os
 import json
 from app.utils.ui_overrides import get_rating_panel_html
+from datetime import datetime
+import re
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -120,6 +122,9 @@ async def admin_page(request: Request):
             # Email tracking
             has_sent = db.query(EmailEvent).filter_by(employee_id=emp.id, event_type="sent").first() is not None
             has_clicked = db.query(EmailEvent).filter_by(employee_id=emp.id, event_type="clicked").first() is not None
+            sched_at = getattr(r, "employee_scheduled_at", None) if r else None
+            sched_display = sched_at.strftime("%Y-%m-%d %H:%M") if sched_at else None
+            sched_value = sched_at.strftime("%Y-%m-%dT%H:%M") if sched_at else ""
             rows.append({
                 "employee": emp,
                 "employee_done": employee_done,
@@ -127,6 +132,8 @@ async def admin_page(request: Request):
                 "director_done": director_done,
                 "has_sent": has_sent,
                 "has_clicked": has_clicked,
+                "self_scheduled_at_display": sched_display,
+                "self_scheduled_at_value": sched_value,
             })
         all_names = [e.name for e in employees]
     finally:
@@ -143,7 +150,7 @@ async def admin_page(request: Request):
 
 
 @router.post("/admin/update-employee/{employee_id}")
-async def admin_update_employee(request: Request, employee_id: str, role: str = Form(None), supervisor_name: str = Form(None)):
+async def admin_update_employee(request: Request, employee_id: str, role: str = Form(None), supervisor_name: str = Form(None), self_scheduled_at: str = Form(None)):
     current_user = get_current_user(request)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
@@ -183,6 +190,39 @@ async def admin_update_employee(request: Request, employee_id: str, role: str = 
                     sup_emp.is_supervisor = True
             changed = True
 
+        # Handle scheduling the employee self review
+        schedule_val = (self_scheduled_at or "").strip()
+        if schedule_val:
+            try:
+                # Expecting 'YYYY-MM-DDTHH:MM' from input[type=datetime-local]
+                parsed = datetime.strptime(schedule_val, "%Y-%m-%dT%H:%M")
+            except Exception:
+                from fastapi.responses import RedirectResponse
+                return RedirectResponse("/admin?error=Invalid%20date%20format", status_code=302)
+            # Find or create review
+            review = db.query(Review).filter_by(employee_id=emp.id).first()
+            if not review:
+                review = Review(employee_id=emp.id)
+                db.add(review)
+                db.flush()
+            # Duplicate check: another review with same datetime
+            dup = db.query(Review).filter(
+                Review.employee_scheduled_at == parsed,
+                Review.employee_id != emp.id
+            ).first()
+            if dup:
+                from fastapi.responses import RedirectResponse
+                return RedirectResponse("/admin?error=Já%20existe%20um%20agendamento%20com%20esta%20data%20e%20hora", status_code=302)
+            if review.employee_scheduled_at != parsed:
+                review.employee_scheduled_at = parsed
+                changed = True
+        else:
+            # Allow clearing the schedule
+            review = db.query(Review).filter_by(employee_id=emp.id).first()
+            if review and review.employee_scheduled_at is not None:
+                review.employee_scheduled_at = None
+                changed = True
+
         if changed:
             db.commit()
 
@@ -191,6 +231,51 @@ async def admin_update_employee(request: Request, employee_id: str, role: str = 
     finally:
         db.close()
 
+
+@router.post("/admin/bulk-update-supervisors", response_class=HTMLResponse)
+async def admin_bulk_update_supervisors(request: Request):
+    current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
+        return HTMLResponse("Access restricted", status_code=403)
+
+    form = await request.form()
+    # Collect mapping supervisor_name[employee_id] => value
+    pattern = re.compile(r"^supervisor_name\[(.+)\]$")
+    updates = {}
+    for key, value in form.multi_items():
+        m = pattern.match(key)
+        if not m:
+            continue
+        emp_id = m.group(1)
+        sup_name_val = (value or "").strip()
+        # Allow blank (clears supervisor)
+        updates[emp_id] = sup_name_val or None
+
+    if not updates:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse("/admin?error=Nenhuma%20alteração%20informada", status_code=302)
+
+    db: Session = SessionLocal()
+    changed = 0
+    try:
+        for emp_id, sup_name in updates.items():
+            emp = db.query(Employee).filter_by(id=emp_id).first()
+            if not emp:
+                continue
+            if emp.supervisor_email != (sup_name or None):
+                emp.supervisor_email = sup_name or None
+                if sup_name:
+                    sup_emp = db.query(Employee).filter(Employee.name == sup_name).first()
+                    if sup_emp and not sup_emp.is_supervisor:
+                        sup_emp.is_supervisor = True
+                changed += 1
+        if changed:
+            db.commit()
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(f"/admin?message=Atualizado:%20{changed}", status_code=302)
+    finally:
+        db.close()
 
 @router.get("/admin/open-review/{employee_id}")
 async def admin_open_review(request: Request, employee_id: str):

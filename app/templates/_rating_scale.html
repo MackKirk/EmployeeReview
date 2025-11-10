@@ -1,4 +1,8 @@
 <div id="rating-scale-panel" style="position:fixed; right:16px; top:16px; width:320px; z-index:1000; background:#ffffff; border:1px solid #e5e7eb; box-shadow:0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1); border-radius:12px;">
+  <button id="rating-scale-hide-btn" type="button" aria-label="Hide rating scale"
+          style="position:absolute; top:8px; right:8px; background:#f3f4f6; color:#374151; border:1px solid #e5e7eb; border-radius:8px; padding:4px 8px; font-size:12px; cursor:pointer;">
+    Hide
+  </button>
   {% if rating_panel_html %}
     {{ rating_panel_html | safe }}
   {% else %}
@@ -50,5 +54,26 @@
     }
   </style>
 </div>
+<button id="rating-scale-fab" type="button" aria-label="Show rating scale"
+        style="display:none; position:fixed; right:16px; bottom:16px; z-index:1000; background:#2563eb; color:#ffffff; border:none; border-radius:9999px; padding:10px 14px; font-size:14px; box-shadow:0 10px 15px -3px rgba(0,0,0,0.2), 0 4px 6px -4px rgba(0,0,0,0.2); cursor:pointer;">
+  Rating Scale
+</button>
+<script>
+  (function() {
+    var panel = document.getElementById('rating-scale-panel');
+    var hideBtn = document.getElementById('rating-scale-hide-btn');
+    var fab = document.getElementById('rating-scale-fab');
+    if (panel && hideBtn && fab) {
+      hideBtn.addEventListener('click', function() {
+        panel.style.display = 'none';
+        fab.style.display = 'inline-flex';
+      });
+      fab.addEventListener('click', function() {
+        panel.style.display = '';
+        fab.style.display = 'none';
+      });
+    }
+  })();
+</script>
 
 

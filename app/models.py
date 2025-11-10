@@ -29,6 +29,7 @@ class Review(Base):
     supervisor_answers = Column(JSONB, nullable=True)
     director_comments = Column(JSONB, nullable=True)
     status = Column(String, default="draft")
+    employee_scheduled_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     employee = relationship("Employee", foreign_keys=[employee_id])
