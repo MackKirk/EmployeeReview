@@ -159,6 +159,14 @@ async def admin_page(request: Request):
             col_exists = db.execute(exists_sql).first() is not None
         except Exception:
             col_exists = False
+        # Auto-migrate if missing
+        if not col_exists:
+            try:
+                db.execute(text("ALTER TABLE reviews ADD COLUMN IF NOT EXISTS employee_scheduled_at TIMESTAMP NULL"))
+                db.commit()
+                col_exists = True
+            except Exception:
+                db.rollback()
         rows = []
         for emp in employees:
             r = db.query(Review).options(
@@ -267,6 +275,14 @@ async def admin_update_employee(request: Request, employee_id: str, role: str = 
             schedule_col_exists = db.execute(exists_sql).first() is not None
         except Exception:
             schedule_col_exists = False
+        if not schedule_col_exists:
+            # Attempt to auto-migrate on first update
+            try:
+                db.execute(text("ALTER TABLE reviews ADD COLUMN IF NOT EXISTS employee_scheduled_at TIMESTAMP NULL"))
+                db.commit()
+                schedule_col_exists = True
+            except Exception:
+                db.rollback()
         if schedule_col_exists:
             if schedule_val:
                 try:
