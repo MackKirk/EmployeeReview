@@ -187,7 +187,7 @@ async def admin_page(request: Request):
                 try:
                     # Load schedule lazily via direct SQL to avoid selecting missing column elsewhere
                     srow = db.execute(
-                        text("SELECT employee_scheduled_at FROM reviews WHERE id=:id"),
+                        text("SELECT employee_scheduled_at FROM reviews WHERE id = :id::uuid"),
                         {"id": str(r.id)},
                     ).first()
                     if srow and srow[0]:
@@ -285,7 +285,7 @@ async def admin_update_employee(request: Request, employee_id: str, role: str = 
                     db.flush()
                 # Duplicate check: another review with same datetime
                 dup = db.execute(
-                    text("SELECT 1 FROM reviews WHERE employee_scheduled_at = :dt AND employee_id <> :eid LIMIT 1"),
+                    text("SELECT 1 FROM reviews WHERE employee_scheduled_at = :dt AND employee_id <> :eid::uuid LIMIT 1"),
                     {"dt": parsed, "eid": str(emp.id)},
                 ).first()
                 if dup:
@@ -294,7 +294,7 @@ async def admin_update_employee(request: Request, employee_id: str, role: str = 
                 # Update via direct SQL to avoid ORM selecting missing columns
                 if review and getattr(review, "id", None):
                     db.execute(
-                        text("UPDATE reviews SET employee_scheduled_at = :dt WHERE id = :id"),
+                        text("UPDATE reviews SET employee_scheduled_at = :dt WHERE id = :id::uuid"),
                         {"dt": parsed, "id": str(review.id)},
                     )
                 changed = True
@@ -305,7 +305,7 @@ async def admin_update_employee(request: Request, employee_id: str, role: str = 
                 ).filter_by(employee_id=emp.id).first()
                 if review and getattr(review, "id", None):
                     db.execute(
-                        text("UPDATE reviews SET employee_scheduled_at = NULL WHERE id = :id"),
+                        text("UPDATE reviews SET employee_scheduled_at = NULL WHERE id = :id::uuid"),
                         {"id": str(review.id)},
                     )
                     changed = True
