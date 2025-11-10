@@ -141,6 +141,50 @@ async def director_dashboard(request: Request):
     })
 
 
+@router.get("/admin/schedule", response_class=HTMLResponse)
+async def admin_schedule(request: Request):
+    current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
+        return HTMLResponse("Access restricted", status_code=403)
+
+    db: Session = SessionLocal()
+    try:
+        # Ensure column exists (auto-migrate if needed)
+        col_exists = False
+        try:
+            exists_sql = text("SELECT 1 FROM information_schema.columns WHERE table_name='reviews' AND column_name='employee_scheduled_at'")
+            col_exists = db.execute(exists_sql).first() is not None
+        except Exception:
+            col_exists = False
+        if not col_exists:
+            try:
+                db.execute(text("ALTER TABLE reviews ADD COLUMN IF NOT EXISTS employee_scheduled_at TIMESTAMP NULL"))
+                db.commit()
+                col_exists = True
+            except Exception:
+                db.rollback()
+        events = []
+        if col_exists:
+            rows = db.execute(text("""
+                SELECT r.employee_scheduled_at, e.name
+                FROM reviews r
+                JOIN employees e ON e.id = r.employee_id
+                WHERE r.employee_scheduled_at IS NOT NULL
+                ORDER BY r.employee_scheduled_at ASC
+            """)).all()
+            for dt, name in rows:
+                if dt:
+                    events.append({"employee": name, "iso": dt.isoformat()})
+        import json as _json
+        return templates.TemplateResponse("admin_schedule.html", {
+            "request": request,
+            "events_json": _json.dumps(events),
+        })
+    finally:
+        db.close()
+
+
 @router.get("/admin", response_class=HTMLResponse)
 async def admin_page(request: Request):
     current_user = get_current_user(request)
@@ -195,7 +239,7 @@ async def admin_page(request: Request):
                 try:
                     # Load schedule lazily via direct SQL to avoid selecting missing column elsewhere
                     srow = db.execute(
-                        text("SELECT employee_scheduled_at FROM reviews WHERE id = :id::uuid"),
+                        text("SELECT employee_scheduled_at FROM reviews WHERE id = CAST(:id AS uuid)"),
                         {"id": str(r.id)},
                     ).first()
                     if srow and srow[0]:
@@ -301,7 +345,7 @@ async def admin_update_employee(request: Request, employee_id: str, role: str = 
                     db.flush()
                 # Duplicate check: another review with same datetime
                 dup = db.execute(
-                    text("SELECT 1 FROM reviews WHERE employee_scheduled_at = :dt AND employee_id <> :eid::uuid LIMIT 1"),
+                    text("SELECT 1 FROM reviews WHERE employee_scheduled_at = :dt AND employee_id <> CAST(:eid AS uuid) LIMIT 1"),
                     {"dt": parsed, "eid": str(emp.id)},
                 ).first()
                 if dup:
@@ -310,7 +354,7 @@ async def admin_update_employee(request: Request, employee_id: str, role: str = 
                 # Update via direct SQL to avoid ORM selecting missing columns
                 if review and getattr(review, "id", None):
                     db.execute(
-                        text("UPDATE reviews SET employee_scheduled_at = :dt WHERE id = :id::uuid"),
+                        text("UPDATE reviews SET employee_scheduled_at = :dt WHERE id = CAST(:id AS uuid)"),
                         {"dt": parsed, "id": str(review.id)},
                     )
                 changed = True
@@ -321,7 +365,7 @@ async def admin_update_employee(request: Request, employee_id: str, role: str = 
                 ).filter_by(employee_id=emp.id).first()
                 if review and getattr(review, "id", None):
                     db.execute(
-                        text("UPDATE reviews SET employee_scheduled_at = NULL WHERE id = :id::uuid"),
+                        text("UPDATE reviews SET employee_scheduled_at = NULL WHERE id = CAST(:id AS uuid)"),
                         {"id": str(review.id)},
                     )
                     changed = True
