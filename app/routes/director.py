@@ -14,6 +14,7 @@ from datetime import datetime
 import re
 from sqlalchemy.orm import load_only
 from sqlalchemy import text
+from app.utils.email import build_review_invite_email
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -696,6 +697,26 @@ async def admin_ui_editor(request: Request):
   <li>Use the rating scale on the right as a reference for each score.</li>
 </ul>
 """.strip()
+    # Prefill email templates with current defaults if empty
+    if not employee_email_subject:
+        employee_email_subject = "Employee Review Notice"
+    if not supervisor_email_subject:
+        supervisor_email_subject = "Supervisor Review Notice"
+    default_inner = """
+<p style="margin:0 0 12px 0;">We’re excited to launch our employee reviews. These are designed to be positive, supportive, and constructive.</p>
+<p style="margin:0 0 8px 0;">What these reviews are for:</p>
+<ul style="margin:0 0 12px 18px;padding:0;">
+  <li>Hearing how you’re feeling in your role</li>
+  <li>Providing an open space for honest feedback</li>
+  <li>Reflecting on goals, growth, and accomplishments</li>
+  <li>Identifying how we can support your development</li>
+</ul>
+<p style="margin:0 0 12px 0;">Please complete your review within the next two weeks. Your responses are confidential and intended to help you thrive.</p>
+""".strip()
+    if not employee_email_html:
+        employee_email_html = default_inner
+    if not supervisor_email_html:
+        supervisor_email_html = (default_inner + '\n<p style="margin:0;">As a supervisor, you can use your dashboard link to review your team.</p>').strip()
     return templates.TemplateResponse("admin_ui.html", {
         "request": request,
         "rating_panel_html": rating_html,
