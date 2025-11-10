@@ -81,15 +81,14 @@ async def supervisor_review(request: Request, employee_id: str):
     if not employee:
         db.close()
         return HTMLResponse("Employee not found", status_code=404)
-    if (
-        not current_user
-        or current_user.name != employee.supervisor_email
-        or not (
-            current_user.role == "supervisor"
-            or current_user.is_supervisor
-            or (current_user.role == "director" and current_user.is_supervisor)
-        )
-    ):
+    is_admin = bool(request.session.get("is_admin"))
+    allowed = False
+    if current_user:
+        if is_admin or current_user.role == "director":
+            allowed = True
+        elif current_user.role == "supervisor" or current_user.is_supervisor:
+            allowed = (current_user.name == employee.supervisor_email)
+    if not allowed:
         db.close()
         return HTMLResponse("Access denied", status_code=403)
 
@@ -130,14 +129,14 @@ async def submit_supervisor_review(request: Request, employee_id: str):
     if not employee:
         db.close()
         return HTMLResponse("Employee not found", status_code=404)
-    if (
-        not current_user
-        or current_user.name != employee.supervisor_email
-        or not (
-            current_user.role == "supervisor"
-            or (current_user.role == "director" and current_user.is_supervisor)
-        )
-    ):
+    is_admin = bool(request.session.get("is_admin"))
+    allowed = False
+    if current_user:
+        if is_admin or current_user.role == "director":
+            allowed = True
+        elif current_user.role == "supervisor" or current_user.is_supervisor:
+            allowed = (current_user.name == employee.supervisor_email)
+    if not allowed:
         db.close()
         return HTMLResponse("Access denied", status_code=403)
 
