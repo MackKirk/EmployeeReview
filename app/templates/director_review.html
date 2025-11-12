@@ -5,6 +5,64 @@
 <div class="max-w-5xl mx-auto bg-white p-8 rounded-xl shadow space-y-6">
   <h1 class="text-3xl font-bold text-gray-800">Final Review of {{ employee.name }}</h1>
 
+  {% if employee_score is not none or supervisor_score is not none %}
+  <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 mb-6">
+    <h2 class="text-xl font-bold text-gray-800 mb-4">📊 Overall Scores</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+        <div class="text-sm text-gray-600 mb-1">Employee Self-Review Score</div>
+        <div class="text-3xl font-bold text-blue-600">
+          {% if employee_score_str %}
+            {{ employee_score_str }}<span class="text-lg text-gray-500">/5.00</span>
+          {% else %}
+            <span class="text-gray-400">N/A</span>
+          {% endif %}
+        </div>
+        {% if employee_score is not none %}
+        <div class="mt-2">
+          <div class="w-full bg-gray-200 rounded-full h-2.5">
+            <div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ (employee_score / 5 * 100)|round }}%"></div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+        <div class="text-sm text-gray-600 mb-1">Supervisor Review Score</div>
+        <div class="text-3xl font-bold text-indigo-600">
+          {% if supervisor_score_str %}
+            {{ supervisor_score_str }}<span class="text-lg text-gray-500">/5.00</span>
+          {% else %}
+            <span class="text-gray-400">N/A</span>
+          {% endif %}
+        </div>
+        {% if supervisor_score is not none %}
+        <div class="mt-2">
+          <div class="w-full bg-gray-200 rounded-full h-2.5">
+            <div class="bg-indigo-600 h-2.5 rounded-full" style="width: {{ (supervisor_score / 5 * 100)|round }}%"></div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% if employee_score is not none and supervisor_score is not none %}
+    <div class="mt-4 pt-4 border-t border-blue-200">
+      <div class="text-sm text-gray-600">
+        <span class="font-semibold">Difference:</span>
+        {% if score_diff is not none %}
+          {% if score_diff > 0 %}
+            <span class="text-green-600">Supervisor scored {{ score_diff_str }} points higher</span>
+          {% elif score_diff < 0 %}
+            <span class="text-orange-600">Employee scored {{ score_diff_str }} points higher</span>
+          {% else %}
+            <span class="text-gray-600">Scores are identical</span>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
   <form method="post" action="/director/review/{{ employee.id }}/submit" class="space-y-6">
 
 {% set ns = namespace(current_category=None) %}

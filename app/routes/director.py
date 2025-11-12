@@ -102,6 +102,34 @@ async def director_view_review(request: Request, employee_id: str):
     except Exception:
         supervisor_map = {}
 
+    # Calculate scores for scale questions only
+    def calculate_score(answers, questions_list):
+        """Calculate average score from scale-type questions only"""
+        scale_values = []
+        emp_answers_map = {a.get("question"): a for a in (answers or []) if isinstance(a, dict)}
+        for q in questions_list:
+            if q.get("type") == "scale":
+                ans = emp_answers_map.get(q.get("question"))
+                if ans and isinstance(ans.get("value"), (int, float)):
+                    val = ans.get("value")
+                    if 1 <= val <= 5:  # Valid scale range
+                        scale_values.append(val)
+        if scale_values:
+            return round(sum(scale_values) / len(scale_values), 2)
+        return None
+
+    employee_score = calculate_score(review.employee_answers, selected_questions)
+    supervisor_score = calculate_score(review.supervisor_answers, selected_questions)
+    
+    # Format scores as strings for display
+    employee_score_str = f"{employee_score:.2f}" if employee_score is not None else None
+    supervisor_score_str = f"{supervisor_score:.2f}" if supervisor_score is not None else None
+    score_diff = None
+    score_diff_str = None
+    if employee_score is not None and supervisor_score is not None:
+        score_diff = supervisor_score - employee_score
+        score_diff_str = f"{abs(score_diff):.2f}"
+
     return templates.TemplateResponse(
         "director_review.html",
         {
@@ -115,6 +143,12 @@ async def director_view_review(request: Request, employee_id: str):
             "category_slugs": category_slugs,
             "rating_panel_html": rating_panel_html,
             "allow_comments": allow_comments,
+            "employee_score": employee_score,
+            "supervisor_score": supervisor_score,
+            "employee_score_str": employee_score_str,
+            "supervisor_score_str": supervisor_score_str,
+            "score_diff": score_diff,
+            "score_diff_str": score_diff_str,
         },
     )
 
