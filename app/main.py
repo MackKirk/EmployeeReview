@@ -143,7 +143,8 @@ def create_tables_on_startup():
                     if not emp:
                         continue
                     # Store supervisor NAME (not email) to align with business rules
-                    if sup_name and emp.supervisor_email != sup_name:
+                    # Only update supervisor_email if it's not already set (to preserve manual edits)
+                    if sup_name and (emp.supervisor_email is None or emp.supervisor_email == ""):
                         emp.supervisor_email = sup_name
                         updated += 1
                     # Also mark supervisors (including managers listed as supervisors) as is_supervisor

@@ -10,9 +10,88 @@ from app.utils.auth_utils import get_current_user
 import uuid
 from datetime import datetime
 from sqlalchemy.orm import load_only
+import re
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+
+
+def adapt_questions_for_supervisor(questions, employee_name):
+    """
+    Adapta as questões substituindo 'you'/'your' por 'employee' ou nome do funcionário
+    para deixar claro que o supervisor está avaliando o funcionário, não a si mesmo.
+    """
+    # Usar "the employee" para tornar mais natural em inglês
+    employee_ref = employee_name if employee_name else "the employee"
+    employee_possessive = f"{employee_name}'s" if employee_name else "the employee's"
+    
+    adapted = []
+    for q in questions:
+        # Criar uma cópia da questão para não modificar a original
+        adapted_q = q.copy()
+        
+        # Substituir no texto da questão
+        question_text = adapted_q.get("question", "")
+        if question_text:
+            # Substituir "your" (case-insensitive, mas preservando capitalização)
+            question_text = re.sub(
+                r'\bYour\b',
+                employee_possessive.title() if employee_name else "The employee's",
+                question_text
+            )
+            question_text = re.sub(
+                r'\byour\b',
+                employee_possessive.lower() if employee_name else "the employee's",
+                question_text,
+                flags=re.IGNORECASE
+            )
+            
+            # Substituir "you" (case-insensitive, mas preservando capitalização)
+            # Evitar substituir em casos como "you're", "you've", etc. (já tratados acima com "your")
+            question_text = re.sub(
+                r'\bYou\b(?!\w)',
+                employee_ref.title() if employee_name else "The employee",
+                question_text
+            )
+            question_text = re.sub(
+                r'\byou\b(?!\w)',
+                employee_ref.lower() if employee_name else "the employee",
+                question_text,
+                flags=re.IGNORECASE
+            )
+            
+            adapted_q["question"] = question_text
+        
+        # Substituir na descrição da categoria se existir
+        if "category_description" in adapted_q and adapted_q["category_description"]:
+            desc_text = adapted_q["category_description"]
+            desc_text = re.sub(
+                r'\bYour\b',
+                employee_possessive.title() if employee_name else "The employee's",
+                desc_text
+            )
+            desc_text = re.sub(
+                r'\byour\b',
+                employee_possessive.lower() if employee_name else "the employee's",
+                desc_text,
+                flags=re.IGNORECASE
+            )
+            desc_text = re.sub(
+                r'\bYou\b(?!\w)',
+                employee_ref.title() if employee_name else "The employee",
+                desc_text
+            )
+            desc_text = re.sub(
+                r'\byou\b(?!\w)',
+                employee_ref.lower() if employee_name else "the employee",
+                desc_text,
+                flags=re.IGNORECASE
+            )
+            adapted_q["category_description"] = desc_text
+        
+        adapted.append(adapted_q)
+    
+    return adapted
 
 
 @router.get("/supervisor/{supervisor_id}", response_class=HTMLResponse)
@@ -102,20 +181,47 @@ async def supervisor_review(request: Request, employee_id: str):
         )
     ).filter_by(employee_id=employee.id).first()
     existing = review.supervisor_answers if review else None
-    existing_map = {a["question"]: a.get("value") for a in existing} if existing else {}
-    comment_map = {a["question"]: a.get("comment") for a in existing} if existing else {}
     readonly = bool(existing)
     db.close()
     rating_panel_html = get_rating_panel_html()
     # Use the employee's role so supervisor reviews the same questionnaire the employee answered
     selected_questions = get_questions_for_role(employee.role)
+    
+    # Create maps using question ID for matching (since we'll adapt the question text)
+    existing_map = {}
+    comment_map = {}
+    if existing:
+        # Create a mapping from original question text to answer
+        question_text_to_answer = {a["question"]: a for a in existing}
+        for q in selected_questions:
+            original_text = q["question"]
+            if original_text in question_text_to_answer:
+                answer_data = question_text_to_answer[original_text]
+                existing_map[original_text] = answer_data.get("value")
+                comment_map[original_text] = answer_data.get("comment")
+    
+    # Adapt questions to replace "you"/"your" with employee name for supervisor clarity
+    adapted_questions = adapt_questions_for_supervisor(selected_questions, employee.name)
+    
+    # Update maps to use adapted question text for display
+    adapted_existing_map = {}
+    adapted_comment_map = {}
+    for i, q_original in enumerate(selected_questions):
+        q_adapted = adapted_questions[i]
+        original_text = q_original["question"]
+        adapted_text = q_adapted["question"]
+        if original_text in existing_map:
+            adapted_existing_map[adapted_text] = existing_map[original_text]
+        if original_text in comment_map:
+            adapted_comment_map[adapted_text] = comment_map[original_text]
+    
     return templates.TemplateResponse("supervisor_review.html", {
         "request": request,
         "employee": employee,
-        "questions": selected_questions,
-        "existing_map": existing_map,
+        "questions": adapted_questions,
+        "existing_map": adapted_existing_map,
         "readonly": readonly,
-        "comment_map": comment_map,
+        "comment_map": adapted_comment_map,
         "rating_panel_html": rating_panel_html,
     })
 

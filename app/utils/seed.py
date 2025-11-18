@@ -122,7 +122,8 @@ def seed_employees_from_csv(db):
             continue
         # Store supervisor NAME (not email) in supervisor_email column to match business need
         # Note: We keep the column name for compatibility, but value is supervisor's name
-        if sup_name and emp.supervisor_email != sup_name:
+        # Only update supervisor_email if it's not already set (to preserve manual edits)
+        if sup_name and (emp.supervisor_email is None or emp.supervisor_email == ""):
             emp.supervisor_email = sup_name
             updated += 1
         # Ensure supervisors (including managers) are flagged
