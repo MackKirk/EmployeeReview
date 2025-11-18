@@ -143,10 +143,22 @@ def create_tables_on_startup():
                     if not emp:
                         continue
                     # Store supervisor NAME (not email) to align with business rules
-                    # Only update supervisor_email if it's not already set (to preserve manual edits)
-                    if sup_name and (emp.supervisor_email is None or emp.supervisor_email == ""):
+                    # IMPORTANT: Only update supervisor_email if it's not already set (to preserve manual edits)
+                    # This prevents the startup seed from overwriting supervisor emails that were manually edited in the UI
+                    current_supervisor = emp.supervisor_email
+                    is_empty = current_supervisor is None or current_supervisor == "" or (isinstance(current_supervisor, str) and current_supervisor.strip() == "")
+                    
+                    # NEVER overwrite if supervisor_email is already set (even if different from CSV)
+                    # This assumes any existing value was set manually and should be preserved
+                    if sup_name and is_empty:
                         emp.supervisor_email = sup_name
                         updated += 1
+                        print(f"[startup] Setting supervisor_email for {name}: '{sup_name}' (was empty)")
+                    elif sup_name and not is_empty:
+                        if current_supervisor != sup_name:
+                            # Log when we skip updating to preserve manual edits
+                            print(f"[startup] PROTECTED: Skipping supervisor_email update for {name}: current='{current_supervisor}', csv='{sup_name}' (preserving manual edit)")
+                        # If they match, no update needed, so we just continue
                     # Also mark supervisors (including managers listed as supervisors) as is_supervisor
                     if sup_name:
                         sup_emp = db.query(Employee).filter(Employee.name == sup_name).first()

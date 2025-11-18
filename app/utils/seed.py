@@ -122,10 +122,22 @@ def seed_employees_from_csv(db):
             continue
         # Store supervisor NAME (not email) in supervisor_email column to match business need
         # Note: We keep the column name for compatibility, but value is supervisor's name
-        # Only update supervisor_email if it's not already set (to preserve manual edits)
-        if sup_name and (emp.supervisor_email is None or emp.supervisor_email == ""):
+        # IMPORTANT: Only update supervisor_email if it's not already set (to preserve manual edits)
+        # This prevents the seed from overwriting supervisor emails that were manually edited in the UI
+        current_supervisor = emp.supervisor_email
+        is_empty = current_supervisor is None or current_supervisor == "" or (isinstance(current_supervisor, str) and current_supervisor.strip() == "")
+        
+        # NEVER overwrite if supervisor_email is already set (even if different from CSV)
+        # This assumes any existing value was set manually and should be preserved
+        if sup_name and is_empty:
             emp.supervisor_email = sup_name
             updated += 1
+            print(f"[seed] Setting supervisor_email for {name}: '{sup_name}' (was empty)")
+        elif sup_name and not is_empty:
+            if current_supervisor != sup_name:
+                # Log when we skip updating to preserve manual edits
+                print(f"[seed] PROTECTED: Skipping supervisor_email update for {name}: current='{current_supervisor}', csv='{sup_name}' (preserving manual edit)")
+            # If they match, no update needed, so we just continue
         # Ensure supervisors (including managers) are flagged
         if sup_name:
             sup_emp = db.query(Employee).filter(Employee.name == sup_name).first()
