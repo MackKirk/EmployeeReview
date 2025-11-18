@@ -21,9 +21,14 @@ def adapt_questions_for_supervisor(questions, employee_name):
     Adapta as questões substituindo 'you'/'your' por 'employee' ou nome do funcionário
     para deixar claro que o supervisor está avaliando o funcionário, não a si mesmo.
     """
-    # Usar "the employee" para tornar mais natural em inglês
-    employee_ref = employee_name if employee_name else "the employee"
-    employee_possessive = f"{employee_name}'s" if employee_name else "the employee's"
+    # Capitalizar o nome corretamente (primeira letra de cada palavra em maiúscula)
+    if employee_name:
+        # Usar title() para capitalizar cada palavra do nome
+        employee_ref = employee_name.title()
+        employee_possessive = f"{employee_ref}'s"
+    else:
+        employee_ref = "the employee"
+        employee_possessive = "the employee's"
     
     adapted = []
     for q in questions:
@@ -36,12 +41,12 @@ def adapt_questions_for_supervisor(questions, employee_name):
             # Substituir "your" (case-insensitive, mas preservando capitalização)
             question_text = re.sub(
                 r'\bYour\b',
-                employee_possessive.title() if employee_name else "The employee's",
+                employee_possessive if employee_name else "The employee's",
                 question_text
             )
             question_text = re.sub(
                 r'\byour\b',
-                employee_possessive.lower() if employee_name else "the employee's",
+                employee_possessive if employee_name else "the employee's",
                 question_text,
                 flags=re.IGNORECASE
             )
@@ -50,12 +55,12 @@ def adapt_questions_for_supervisor(questions, employee_name):
             # Evitar substituir em casos como "you're", "you've", etc. (já tratados acima com "your")
             question_text = re.sub(
                 r'\bYou\b(?!\w)',
-                employee_ref.title() if employee_name else "The employee",
+                employee_ref if employee_name else "The employee",
                 question_text
             )
             question_text = re.sub(
                 r'\byou\b(?!\w)',
-                employee_ref.lower() if employee_name else "the employee",
+                employee_ref if employee_name else "the employee",
                 question_text,
                 flags=re.IGNORECASE
             )
@@ -67,23 +72,23 @@ def adapt_questions_for_supervisor(questions, employee_name):
             desc_text = adapted_q["category_description"]
             desc_text = re.sub(
                 r'\bYour\b',
-                employee_possessive.title() if employee_name else "The employee's",
+                employee_possessive if employee_name else "The employee's",
                 desc_text
             )
             desc_text = re.sub(
                 r'\byour\b',
-                employee_possessive.lower() if employee_name else "the employee's",
+                employee_possessive if employee_name else "the employee's",
                 desc_text,
                 flags=re.IGNORECASE
             )
             desc_text = re.sub(
                 r'\bYou\b(?!\w)',
-                employee_ref.title() if employee_name else "The employee",
+                employee_ref if employee_name else "The employee",
                 desc_text
             )
             desc_text = re.sub(
                 r'\byou\b(?!\w)',
-                employee_ref.lower() if employee_name else "the employee",
+                employee_ref if employee_name else "the employee",
                 desc_text,
                 flags=re.IGNORECASE
             )
