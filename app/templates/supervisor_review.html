@@ -19,6 +19,7 @@
 
     <div>
       <label class="block font-semibold text-gray-700 mb-1">{{ q.question }}</label>
+      <p class="text-xs text-amber-600 italic mb-2">⚠️ This question refers to {{ employee.name }}, the employee you are evaluating.</p>
 
       {% if q.type == "scale" %}
       <div class="flex space-x-4 text-sm text-gray-600">
