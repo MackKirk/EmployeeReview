@@ -189,10 +189,10 @@ async def admin_send_review_link(request: Request, employee_id: str):
 
         token = generate_magic_login_token(str(emp.id), redirect_url=f"/employee/{emp.id}", role=emp.role)
         link = f"{base_url}/magic-login?token={token}"
-        # Supervisor dashboard link for supervisors
+        # Supervisor dashboard link for supervisors - redirects to /home to show choice
         sup_link = None
         if emp.role == "supervisor" or emp.is_supervisor:
-            sup_token = generate_magic_login_token(str(emp.id), redirect_url=f"/supervisor/{emp.id}", role=emp.role)
+            sup_token = generate_magic_login_token(str(emp.id), redirect_url="/home", role=emp.role, never_expires=True)
             sup_link = f"{base_url}/magic-login?token={sup_token}"
         subject = "Employee Review Notice"
         html = build_review_invite_email(emp.name, link, base_url, supervisor_link=sup_link, is_supervisor=(emp.role == "supervisor" or emp.is_supervisor))
@@ -238,7 +238,7 @@ async def admin_send_review_links(request: Request, role: str = Form(None)):
             link = f"{base_url}/magic-login?token={token}"
             sup_link = None
             if emp.role == "supervisor" or emp.is_supervisor:
-                sup_token = generate_magic_login_token(str(emp.id), redirect_url=f"/supervisor/{emp.id}", role=emp.role)
+                sup_token = generate_magic_login_token(str(emp.id), redirect_url="/home", role=emp.role, never_expires=True)
                 sup_link = f"{base_url}/magic-login?token={sup_token}"
             subject = "Employee Review Notice"
             html = build_review_invite_email(emp.name, link, base_url, supervisor_link=sup_link, is_supervisor=(emp.role == "supervisor" or emp.is_supervisor))
