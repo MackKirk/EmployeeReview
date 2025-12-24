@@ -215,7 +215,8 @@ async def admin_send_review_link(request: Request, employee_id: str):
 @router.post("/admin/send-review-links")
 async def admin_send_review_links(request: Request, role: str = Form(None)):
     user = get_current_user(request)
-    if not user or user.role != "director":
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((user and user.role == "director") or is_admin):
         return HTMLResponse("Access denied", status_code=403)
 
     base_url = os.getenv("APP_BASE_URL", "http://localhost:8000")
