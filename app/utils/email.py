@@ -22,6 +22,31 @@ def send_email(to_email: str, subject: str, html_body: str) -> bool:
         print("[email] Missing SMTP_USER/SMTP_PASSWORD (or set SMTP_LOGIN_DISABLED=1)")
         return False
 
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = from_email
+    msg["To"] = to_email
+    msg.attach(MIMEText(html_body, "html"))
+
+    try:
+        if use_ssl:
+            context = ssl.create_default_context()
+            with smtplib.SMTP_SSL(host, port, context=context) as server:
+                if not login_disabled:
+                    server.login(user, password)
+                server.sendmail(from_email, [to_email], msg.as_string())
+        else:
+            with smtplib.SMTP(host, port) as server:
+                if use_tls:
+                    server.starttls(context=ssl.create_default_context())
+                if not login_disabled:
+                    server.login(user, password)
+                server.sendmail(from_email, [to_email], msg.as_string())
+        return True
+    except Exception as e:
+        print(f"[email] Send failed: {e}")
+        return False
+
 
 def build_review_invite_email(employee_name: str, link: str, base_url: str, supervisor_link: str = None, is_supervisor: bool = False) -> str:
     logo_url = f"{base_url.rstrip('/')}/static/logo.png"
@@ -96,7 +121,7 @@ def build_review_invite_email(employee_name: str, link: str, base_url: str, supe
             <tr>
               <td align="center" style="padding:4px 24px 20px 24px;">
                 {main_cta}
-                <div style="color:#6b7280;font-size:12px;margin-top:10px;">If a button doesn’t work, copy this URL:<br>{link}</div>
+                <div style="color:#6b7280;font-size:12px;margin-top:10px;">If a button doesn't work, copy this URL:<br>{link}</div>
                 <div style="color:#9ca3af;font-size:12px;margin-top:8px;">This secure link expires in {days} days.</div>
               </td>
             </tr>
@@ -114,31 +139,6 @@ def build_review_invite_email(employee_name: str, link: str, base_url: str, supe
   </html>
 """
     )
-
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = from_email
-    msg["To"] = to_email
-    msg.attach(MIMEText(html_body, "html"))
-
-    try:
-        if use_ssl:
-            context = ssl.create_default_context()
-            with smtplib.SMTP_SSL(host, port, context=context) as server:
-                if not login_disabled:
-                    server.login(user, password)
-                server.sendmail(from_email, [to_email], msg.as_string())
-        else:
-            with smtplib.SMTP(host, port) as server:
-                if use_tls:
-                    server.starttls(context=ssl.create_default_context())
-                if not login_disabled:
-                    server.login(user, password)
-                server.sendmail(from_email, [to_email], msg.as_string())
-        return True
-    except Exception as e:
-        print(f"[email] Send failed: {e}")
-        return False
 
 
 def send_email_verbose(to_email: str, subject: str, html_body: str):
