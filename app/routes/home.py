@@ -257,3 +257,55 @@ async def admin_send_review_links(request: Request, role: str = Form(None)):
         return HTMLResponse(f"Emails sent: {sent}. Skipped: {skipped}. Role filter: {role or 'all'}.", status_code=200)
     finally:
         db.close()
+
+
+@router.post("/admin/send-reminders")
+async def admin_send_reminders(request: Request):
+    user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((user and user.role == "director") or is_admin):
+        return HTMLResponse("Access denied", status_code=403)
+
+    base_url = os.getenv("APP_BASE_URL", "http://localhost:8000")
+    if not (base_url.startswith("http://") or base_url.startswith("https://")):
+        base_url = "https://" + base_url
+    base_url = base_url.rstrip("/")
+    db: Session = SessionLocal()
+    try:
+        employees = db.query(Employee).all()
+        sent = 0
+        skipped = 0
+        for emp in employees:
+            if not emp.email:
+                skipped += 1
+                continue
+            
+            # Check if employee has already completed the review
+            review = db.query(Review).filter_by(employee_id=emp.id).first()
+            if review and review.employee_answers:
+                # Already completed, skip
+                skipped += 1
+                continue
+            
+            token = generate_magic_login_token(str(emp.id), redirect_url=f"/employee/{emp.id}", role=emp.role)
+            link = f"{base_url}/magic-login?token={token}"
+            sup_link = None
+            if emp.role == "supervisor" or emp.is_supervisor:
+                sup_token = generate_magic_login_token(str(emp.id), redirect_url="/home", role=emp.role, never_expires=True)
+                sup_link = f"{base_url}/magic-login?token={sup_token}"
+            subject = "Reminder: Employee Review Notice"
+            html = build_review_invite_email(emp.name, link, base_url, supervisor_link=sup_link, is_supervisor=(emp.role == "supervisor" or emp.is_supervisor))
+            ok = send_email(emp.email, subject, html)
+            if ok:
+                sent += 1
+                try:
+                    evt = EmailEvent(employee_id=emp.id, event_type="sent")
+                    db.add(evt)
+                    db.commit()
+                except Exception:
+                    db.rollback()
+            else:
+                skipped += 1
+        return HTMLResponse(f"Reminder emails sent: {sent}. Skipped: {skipped} (already completed or no email).", status_code=200)
+    finally:
+        db.close()

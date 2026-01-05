@@ -34,6 +34,9 @@
       <form method="post" action="/admin/send-review-links" class="inline" data-confirm>
         <button class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Send to All</button>
       </form>
+      <form method="post" action="/admin/send-reminders" class="inline" data-confirm>
+        <button class="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700">Send Reminders (Not Completed)</button>
+      </form>
       <form method="post" action="/admin/send-test-email" class="inline" onsubmit="return confirm('Send a test email?');">
         <input type="email" name="to" placeholder="test@example.com" class="border rounded px-3 py-2" required>
         <button class="bg-gray-800 text-white px-4 py-2 rounded hover:bg-black">Send test email</button>
