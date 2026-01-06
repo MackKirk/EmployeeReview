@@ -376,6 +376,34 @@ async def admin_page(request: Request):
                 "self_scheduled_at_value": sched_value,
             })
         all_names = [e.name for e in employees]
+        
+        # Calculate pending counts
+        employee_pending = 0
+        supervisor_pending = 0
+        director_pending = 0
+        
+        for emp in employees:
+            r = db.query(Review).options(
+                load_only(
+                    Review.employee_id,
+                    Review.employee_answers,
+                    Review.supervisor_answers,
+                    Review.director_comments,
+                )
+            ).filter_by(employee_id=emp.id).first()
+            
+            # Employee pending: no employee_answers
+            if not r or not r.employee_answers:
+                employee_pending += 1
+            
+            # Supervisor pending: has employee_answers but no supervisor_answers
+            # Only count if employee has a supervisor assigned
+            if r and r.employee_answers and not r.supervisor_answers and emp.supervisor_email:
+                supervisor_pending += 1
+            
+            # Director pending: has employee_answers and supervisor_answers but no director_comments
+            if r and r.employee_answers and r.supervisor_answers and not r.director_comments:
+                director_pending += 1
     finally:
         db.close()
 
@@ -386,6 +414,9 @@ async def admin_page(request: Request):
         "allowed_roles": ["employee", "supervisor", "administration", "director"],
         "message": request.query_params.get("message"),
         "error": request.query_params.get("error"),
+        "employee_pending": employee_pending,
+        "supervisor_pending": supervisor_pending,
+        "director_pending": director_pending,
     })
 
 

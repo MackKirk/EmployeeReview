@@ -21,11 +21,11 @@
     <div class="space-x-2">
       <form method="post" action="/admin/send-review-links" class="inline" data-confirm>
         <input type="hidden" name="role" value="employee">
-        <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Send to Employees</button>
+        <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Send to Employees <span class="font-bold">({{ employee_pending }} pending)</span></button>
       </form>
       <form method="post" action="/admin/send-review-links" class="inline" data-confirm>
         <input type="hidden" name="role" value="supervisor">
-        <button class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Send to Supervisors</button>
+        <button class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Send to Supervisors <span class="font-bold">({{ supervisor_pending }} pending)</span></button>
       </form>
       <form method="post" action="/admin/send-review-links" class="inline" data-confirm>
         <input type="hidden" name="role" value="administration">
@@ -35,12 +35,17 @@
         <button class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Send to All</button>
       </form>
       <form method="post" action="/admin/send-reminders" class="inline" data-confirm>
-        <button class="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700">Send Reminders (Not Completed)</button>
+        <button class="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 font-semibold">Send Reminders (Not Completed) <span class="font-bold">({{ employee_pending }} pending)</span></button>
       </form>
       <form method="post" action="/admin/send-test-email" class="inline" onsubmit="return confirm('Send a test email?');">
         <input type="email" name="to" placeholder="test@example.com" class="border rounded px-3 py-2" required>
         <button class="bg-gray-800 text-white px-4 py-2 rounded hover:bg-black">Send test email</button>
       </form>
+    </div>
+    <div class="mt-2 text-sm text-gray-600">
+      <span class="font-semibold">Pending Reviews:</span> Employees: <span class="font-bold text-blue-600">{{ employee_pending }}</span> | 
+      Supervisors: <span class="font-bold text-indigo-600">{{ supervisor_pending }}</span> | 
+      Directors: <span class="font-bold text-purple-600">{{ director_pending }}</span>
     </div>
   </div>
 
