@@ -15,39 +15,6 @@
   <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-2 rounded-lg text-sm">{{ error }}</div>
   {% endif %}
 
-  {# Ready to schedule: employees with both employee + supervisor reviews done #}
-  <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
-    <h2 class="text-lg font-semibold text-gray-800 mb-2">Ready to schedule (employee + supervisor reviews done)</h2>
-    <p class="text-sm text-gray-600 mb-4">Pick a date and a 15‑minute slot to schedule the meeting.</p>
-    {% if ready_to_schedule %}
-    <div class="space-y-3">
-      {% for item in ready_to_schedule %}
-      <div class="flex flex-wrap items-center gap-3 py-2 border-b border-slate-200 last:border-0">
-        <span class="font-medium text-gray-800 min-w-[140px]">{{ item.name }}</span>
-        {% if item.scheduled_display %}
-        <span class="text-sm text-gray-500">Currently: {{ item.scheduled_display }}</span>
-        {% endif %}
-        <form action="/admin/schedule-employee/{{ item.employee_id }}" method="post" class="flex flex-wrap items-center gap-2">
-          <input type="date" name="date" required class="border border-gray-300 rounded px-2 py-1.5 text-sm" value="{{ (item.scheduled_at[:10] if item.scheduled_at else '') }}">
-          <select name="time" required class="border border-gray-300 rounded px-2 py-1.5 text-sm">
-            <option value="">Time</option>
-            {% for h in range(24) %}
-              {% for m in [0, 15, 30, 45] %}
-            {% set slot = "%02d"|format(h) ~ ":" ~ "%02d"|format(m) %}
-            <option value="{{ slot }}"{% if item.scheduled_time == slot %} selected{% endif %}>{{ slot }}</option>
-              {% endfor %}
-            {% endfor %}
-          </select>
-          <button type="submit" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700">Schedule</button>
-        </form>
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <p class="text-sm text-gray-500">No one has both reviews completed yet.</p>
-    {% endif %}
-  </div>
-
   <div class="flex items-center justify-between">
     <div class="flex items-center space-x-2">
       <button id="prev-month" class="bg-gray-100 text-gray-800 px-3 py-1 rounded hover:bg-gray-200">◀</button>
@@ -68,11 +35,71 @@
   </div>
   <div id="calendar-grid" class="grid grid-cols-7 gap-2"></div>
 
-  <div class="mt-6">
-    <h2 class="text-lg font-semibold text-gray-800 mb-2">Upcoming (list)</h2>
-    <div id="flat-list" class="space-y-1 text-sm text-gray-700"></div>
+  {# Tabs below calendar #}
+  <div class="mt-6 border border-gray-200 rounded-xl overflow-hidden">
+    <div class="flex border-b border-gray-200 bg-gray-100">
+      <button type="button" id="tab-upcoming" class="schedule-tab px-4 py-3 text-sm font-medium text-gray-700 bg-white border-b-2 border-blue-600 -mb-px" data-panel="panel-upcoming">Upcoming</button>
+      <button type="button" id="tab-pending" class="schedule-tab px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700" data-panel="panel-pending">Pending scheduling</button>
+    </div>
+    <div id="panel-upcoming" class="schedule-panel p-4 bg-white">
+      <div id="flat-list" class="space-y-1 text-sm text-gray-700"></div>
+    </div>
+    <div id="panel-pending" class="schedule-panel p-4 bg-white hidden">
+      <p class="text-sm text-gray-600 mb-4">Employees with both employee and supervisor reviews done. Pick a date and a 15‑minute slot to schedule the meeting.</p>
+      {% if ready_to_schedule %}
+      <div class="space-y-3">
+        {% for item in ready_to_schedule %}
+        <div class="flex flex-wrap items-center gap-3 py-2 border-b border-slate-200 last:border-0">
+          <span class="font-medium text-gray-800 min-w-[140px]">{{ item.name }}</span>
+          {% if item.scheduled_display %}
+          <span class="text-sm text-gray-500">Currently: {{ item.scheduled_display }}</span>
+          {% endif %}
+          <form action="/admin/schedule-employee/{{ item.employee_id }}" method="post" class="flex flex-wrap items-center gap-2">
+            <input type="date" name="date" required class="border border-gray-300 rounded px-2 py-1.5 text-sm" value="{{ (item.scheduled_at[:10] if item.scheduled_at else '') }}">
+            <select name="time" required class="border border-gray-300 rounded px-2 py-1.5 text-sm">
+              <option value="">Time</option>
+              {% for h in range(24) %}
+                {% for m in [0, 15, 30, 45] %}
+              {% set slot = "%02d"|format(h) ~ ":" ~ "%02d"|format(m) %}
+              <option value="{{ slot }}"{% if item.scheduled_time == slot %} selected{% endif %}>{{ slot }}</option>
+                {% endfor %}
+              {% endfor %}
+            </select>
+            <button type="submit" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700">Schedule</button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-500">No one has both reviews completed yet.</p>
+      {% endif %}
+    </div>
   </div>
 </div>
+
+<script>
+(function(){
+  var tabButtons = document.querySelectorAll('.schedule-tab');
+  var panels = document.querySelectorAll('.schedule-panel');
+  function showPanel(panelId) {
+    panels.forEach(function(p){ p.classList.add('hidden'); });
+    tabButtons.forEach(function(b){
+      b.classList.remove('bg-white', 'border-b-2', 'border-blue-600', '-mb-px');
+      b.classList.add('text-gray-500');
+    });
+    var panel = document.getElementById(panelId);
+    if (panel) panel.classList.remove('hidden');
+    var btn = document.querySelector('.schedule-tab[data-panel="' + panelId + '"]');
+    if (btn) {
+      btn.classList.add('bg-white', 'border-b-2', 'border-blue-600', '-mb-px');
+      btn.classList.remove('text-gray-500');
+    }
+  }
+  tabButtons.forEach(function(btn){
+    btn.addEventListener('click', function(){ showPanel(btn.getAttribute('data-panel')); });
+  });
+})();
+</script>
 
 <script>
 (function(){
