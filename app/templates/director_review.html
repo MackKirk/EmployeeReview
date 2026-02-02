@@ -3,8 +3,8 @@
 
 {% block content %}
 <div class="flex flex-col lg:grid lg:grid-cols-2 gap-0 max-w-[1800px] mx-auto bg-white rounded-xl shadow min-h-[calc(100vh-8rem)]">
-  {# Coluna esquerda: 50% — respostas Self + Supervisor (rolável) #}
-  <div class="w-full min-w-0 overflow-y-auto p-6 lg:p-8 order-2 lg:order-1 border-r border-gray-200">
+  {# Left column: 50% — Self + Supervisor responses; scrolls with page #}
+  <div class="w-full min-w-0 p-6 lg:p-8 order-2 lg:order-1 border-r border-gray-200">
     <h1 class="text-3xl font-bold text-gray-800 mb-6">Final Review of {{ employee.name }}</h1>
 
     {% if employee_score is not none or supervisor_score is not none %}
@@ -102,58 +102,54 @@
     {% endfor %}
   </div>
 
-  {# Coluna direita: 50% — Rating Scale + um único campo de resumo para a reunião #}
-  <div class="w-full min-w-0 flex flex-col bg-gray-50/80 order-1 lg:order-2">
-    <div class="sticky top-0 flex flex-col h-full min-h-[400px]">
-      <div class="flex-1 overflow-y-auto p-6 space-y-4">
-        {# Rating scale #}
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          {% if rating_panel_html %}
-            {{ rating_panel_html | safe }}
-          {% else %}
-            <div class="px-4 py-3 border-b border-gray-100 font-bold text-gray-800">Rating Scale</div>
-            <div class="p-4">
-              <table class="w-full text-sm text-gray-700 border-collapse">
-                <thead>
-                  <tr class="text-left text-gray-500 border-b border-gray-200">
-                    <th class="pb-2 pr-2">Score</th>
-                    <th class="pb-2 pr-2">Meaning</th>
-                    <th class="pb-2">Example</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr class="border-b border-gray-100"><td class="py-1.5 pr-2">5</td><td class="py-1.5 pr-2">Outstanding</td><td class="py-1.5">Goes above and beyond</td></tr>
-                  <tr class="border-b border-gray-100"><td class="py-1.5 pr-2">4</td><td class="py-1.5 pr-2">Above Average</td><td class="py-1.5">Often exceeds expectations</td></tr>
-                  <tr class="border-b border-gray-100"><td class="py-1.5 pr-2">3</td><td class="py-1.5 pr-2">Meets Expectations</td><td class="py-1.5">Reliable and consistent</td></tr>
-                  <tr class="border-b border-gray-100"><td class="py-1.5 pr-2">2</td><td class="py-1.5 pr-2">Needs Improvement</td><td class="py-1.5">Requires closer supervision</td></tr>
-                  <tr><td class="py-1.5 pr-2">1</td><td class="py-1.5 pr-2">Not Meeting Standards</td><td class="py-1.5">Unsafe or unprofessional</td></tr>
-                </tbody>
-              </table>
-            </div>
-          {% endif %}
+  {# Right column: 50% — Rating Scale + summary field; scrolls with page #}
+  <div class="w-full min-w-0 p-6 lg:p-8 bg-gray-50/80 order-1 lg:order-2 space-y-4">
+    {# Rating scale #}
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      {% if rating_panel_html %}
+        {{ rating_panel_html | safe }}
+      {% else %}
+        <div class="px-4 py-3 border-b border-gray-100 font-bold text-gray-800">Rating Scale</div>
+        <div class="p-4">
+          <table class="w-full text-sm text-gray-700 border-collapse">
+            <thead>
+              <tr class="text-left text-gray-500 border-b border-gray-200">
+                <th class="pb-2 pr-2">Score</th>
+                <th class="pb-2 pr-2">Meaning</th>
+                <th class="pb-2">Example</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="border-b border-gray-100"><td class="py-1.5 pr-2">5</td><td class="py-1.5 pr-2">Outstanding</td><td class="py-1.5">Goes above and beyond</td></tr>
+              <tr class="border-b border-gray-100"><td class="py-1.5 pr-2">4</td><td class="py-1.5 pr-2">Above Average</td><td class="py-1.5">Often exceeds expectations</td></tr>
+              <tr class="border-b border-gray-100"><td class="py-1.5 pr-2">3</td><td class="py-1.5 pr-2">Meets Expectations</td><td class="py-1.5">Reliable and consistent</td></tr>
+              <tr class="border-b border-gray-100"><td class="py-1.5 pr-2">2</td><td class="py-1.5 pr-2">Needs Improvement</td><td class="py-1.5">Requires closer supervision</td></tr>
+              <tr><td class="py-1.5 pr-2">1</td><td class="py-1.5 pr-2">Not Meeting Standards</td><td class="py-1.5">Unsafe or unprofessional</td></tr>
+            </tbody>
+          </table>
         </div>
-
-        {% if allow_comments %}
-        <form method="post" action="/director/review/{{ employee.id }}/submit" class="space-y-3">
-          <h2 class="text-lg font-bold text-gray-800">📝 Seu resumo para a reunião</h2>
-          <p class="text-sm text-gray-600">Escreva aqui o que quiser: opiniões, pontos a comentar, notas para ler na reunião pessoal.</p>
-          <textarea name="director_summary" rows="14" class="w-full border border-gray-300 p-3 rounded-lg text-sm resize-y min-h-[200px]" placeholder="Suas notas e opiniões para usar na reunião…">{{ director_summary or '' }}</textarea>
-          <button type="submit" class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition shadow-sm">
-            💾 Salvar resumo
-          </button>
-        </form>
-        {% else %}
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
-          <h2 class="text-lg font-bold text-gray-800 mb-2">Resumo para a reunião</h2>
-          {% if director_summary %}
-            <div class="text-gray-700 whitespace-pre-wrap text-sm">{{ director_summary }}</div>
-          {% else %}
-            <p class="text-gray-500 text-sm">Nenhum resumo salvo.</p>
-          {% endif %}
-        </div>
-        {% endif %}
-      </div>
+      {% endif %}
     </div>
+
+    {% if allow_comments %}
+    <form method="post" action="/director/review/{{ employee.id }}/submit" class="space-y-3">
+      <h2 class="text-lg font-bold text-gray-800">📝 Your summary for the meeting</h2>
+      <p class="text-sm text-gray-600">Write whatever you want: opinions, points to discuss, notes to read in the personal meeting.</p>
+      <textarea name="director_summary" rows="14" class="w-full border border-gray-300 p-3 rounded-lg text-sm resize-y min-h-[200px]" placeholder="Your notes and opinions to use in the meeting…">{{ director_summary or '' }}</textarea>
+      <button type="submit" class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition shadow-sm">
+        💾 Save summary
+      </button>
+    </form>
+    {% else %}
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <h2 class="text-lg font-bold text-gray-800 mb-2">Summary for the meeting</h2>
+      {% if director_summary %}
+        <div class="text-gray-700 whitespace-pre-wrap text-sm">{{ director_summary }}</div>
+      {% else %}
+        <p class="text-gray-500 text-sm">No summary saved.</p>
+      {% endif %}
+    </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}
