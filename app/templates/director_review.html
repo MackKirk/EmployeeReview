@@ -102,8 +102,9 @@
     {% endfor %}
   </div>
 
-  {# Right column: 50% — Rating Scale + summary field; scrolls with page #}
-  <div class="w-full min-w-0 p-6 lg:p-8 bg-gray-50/80 order-1 lg:order-2 space-y-4">
+  {# Right column: 50% — Rating Scale + summary; sticky so it stays visible while left side scrolls #}
+  <div class="w-full min-w-0 order-1 lg:order-2 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+    <div class="p-6 lg:p-8 bg-gray-50/80 space-y-4">
     {# Rating scale #}
     <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       {% if rating_panel_html %}
@@ -150,6 +151,7 @@
       {% endif %}
     </div>
     {% endif %}
+    </div>
   </div>
 </div>
 {% endblock %}
