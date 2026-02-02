@@ -2,9 +2,9 @@
 {% block title %}Director Final Review{% endblock %}
 
 {% block content %}
-<div class="flex flex-col lg:flex-row gap-6 max-w-[1600px] mx-auto bg-white rounded-xl shadow min-h-[calc(100vh-8rem)]">
-  {# Coluna esquerda: respostas Self + Supervisor (rolável) #}
-  <div class="flex-1 min-w-0 overflow-y-auto p-6 lg:p-8 order-2 lg:order-1">
+<div class="flex flex-col lg:grid lg:grid-cols-2 gap-0 max-w-[1800px] mx-auto bg-white rounded-xl shadow min-h-[calc(100vh-8rem)]">
+  {# Coluna esquerda: 50% — respostas Self + Supervisor (rolável) #}
+  <div class="w-full min-w-0 overflow-y-auto p-6 lg:p-8 order-2 lg:order-1 border-r border-gray-200">
     <h1 class="text-3xl font-bold text-gray-800 mb-6">Final Review of {{ employee.name }}</h1>
 
     {% if employee_score is not none or supervisor_score is not none %}
@@ -98,18 +98,15 @@
             </div>
           </div>
         </div>
-        {% if not allow_comments and comment_map.get(q.question) %}
-        <div class="mt-2 text-sm text-gray-600"><span class="font-semibold">Director comment:</span> {{ comment_map.get(q.question) }}</div>
-        {% endif %}
       </div>
     {% endfor %}
   </div>
 
-  {# Coluna direita: painel fixo — Rating Scale + formulário do diretor #}
-  <div class="w-full lg:w-[420px] xl:w-[440px] flex-shrink-0 lg:border-l border-gray-200 bg-gray-50/80 order-1 lg:order-2">
-    <div class="sticky top-4 flex flex-col max-h-[calc(100vh-2rem)]">
-      <div class="overflow-y-auto flex-1 p-4 space-y-4">
-        {# Rating scale integrado ao painel #}
+  {# Coluna direita: 50% — Rating Scale + um único campo de resumo para a reunião #}
+  <div class="w-full min-w-0 flex flex-col bg-gray-50/80 order-1 lg:order-2">
+    <div class="sticky top-0 flex flex-col h-full min-h-[400px]">
+      <div class="flex-1 overflow-y-auto p-6 space-y-4">
+        {# Rating scale #}
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           {% if rating_panel_html %}
             {{ rating_panel_html | safe }}
@@ -137,33 +134,23 @@
         </div>
 
         {% if allow_comments %}
-        <form method="post" action="/director/review/{{ employee.id }}/submit" class="space-y-4">
-          <h2 class="text-lg font-bold text-gray-800 pt-2">📝 Your review for the meeting</h2>
-          <p class="text-sm text-gray-600">Use this panel while you read the answers on the left. Your notes will be saved and used in the personal meeting.</p>
-
-          {% set ns2 = namespace(current_cat=None) %}
-          {% for q in questions %}
-            {% if q.category != ns2.current_cat %}
-              <div class="pt-2">
-                <label class="block text-sm font-semibold text-gray-700 mb-1">Section: {{ q.category }}</label>
-                <textarea name="sc_{{ category_slugs.get(q.category) }}" rows="2" class="w-full border border-gray-300 p-2 rounded-lg text-sm" placeholder="Director section comment">{{ section_map.get(q.category, '') }}</textarea>
-              </div>
-              {% set ns2.current_cat = q.category %}
-            {% endif %}
-            <div>
-              <label class="block text-xs font-medium text-gray-500 mb-1 truncate" title="{{ q.question }}">Comment: {{ q.question[:60] }}{% if q.question|length > 60 %}…{% endif %}</label>
-              <textarea name="c{{ q.id }}" rows="2" class="w-full border border-gray-300 p-2 rounded-lg text-sm" placeholder="Director comment">{{ comment_map.get(q.question, '') }}</textarea>
-            </div>
-          {% endfor %}
-
-          <div class="pt-4 pb-2">
-            <button type="submit" class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition shadow-sm">
-              💾 Save review
-            </button>
-          </div>
+        <form method="post" action="/director/review/{{ employee.id }}/submit" class="space-y-3">
+          <h2 class="text-lg font-bold text-gray-800">📝 Seu resumo para a reunião</h2>
+          <p class="text-sm text-gray-600">Escreva aqui o que quiser: opiniões, pontos a comentar, notas para ler na reunião pessoal.</p>
+          <textarea name="director_summary" rows="14" class="w-full border border-gray-300 p-3 rounded-lg text-sm resize-y min-h-[200px]" placeholder="Suas notas e opiniões para usar na reunião…">{{ director_summary or '' }}</textarea>
+          <button type="submit" class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition shadow-sm">
+            💾 Salvar resumo
+          </button>
         </form>
         {% else %}
-        <div class="text-sm text-gray-600 pt-2">Director comments are read-only here.</div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+          <h2 class="text-lg font-bold text-gray-800 mb-2">Resumo para a reunião</h2>
+          {% if director_summary %}
+            <div class="text-gray-700 whitespace-pre-wrap text-sm">{{ director_summary }}</div>
+          {% else %}
+            <p class="text-gray-500 text-sm">Nenhum resumo salvo.</p>
+          {% endif %}
+        </div>
         {% endif %}
       </div>
     </div>

@@ -77,6 +77,25 @@ async def director_view_review(request: Request, employee_id: str):
         existing_sections = []
         section_map = {}
 
+    # Director summary (single text for meeting notes)
+    director_summary = ""
+    try:
+        exists_sql = text("SELECT 1 FROM information_schema.columns WHERE table_name='reviews' AND column_name='director_review_summary'")
+        if db.execute(exists_sql).first() is None:
+            try:
+                db.execute(text("ALTER TABLE reviews ADD COLUMN IF NOT EXISTS director_review_summary TEXT NULL"))
+                db.commit()
+            except Exception:
+                db.rollback()
+        row = db.execute(
+            text("SELECT director_review_summary FROM reviews WHERE id = CAST(:id AS uuid)"),
+            {"id": str(review.id)},
+        ).first()
+        if row and row[0]:
+            director_summary = row[0] or ""
+    except Exception:
+        director_summary = ""
+
     allow_comments = bool((current_user and current_user.role == "director") or is_admin)
     rating_panel_html = get_rating_panel_html()
 
@@ -149,6 +168,7 @@ async def director_view_review(request: Request, employee_id: str):
             "supervisor_score_str": supervisor_score_str,
             "score_diff": score_diff,
             "score_diff_str": score_diff_str,
+            "director_summary": director_summary,
         },
     )
 
@@ -179,42 +199,24 @@ async def save_director_comments(request: Request, employee_id: str):
         return HTMLResponse("Review not found.", status_code=404)
 
     form = await request.form()
-    comments = []
-    selected_questions = get_questions_for_role(emp.role)
-    for q in selected_questions:
-        comment = form.get(f"c{q['id']}")
-        comments.append({"question": q["question"], "comment": comment})
+    director_summary = (form.get("director_summary") or "").strip()
 
-    # Section comments
-    # Ensure column exists
+    # Ensure director_review_summary column exists and save
     try:
-        exists_sql = text("SELECT 1 FROM information_schema.columns WHERE table_name='reviews' AND column_name='director_section_comments'")
+        exists_sql = text("SELECT 1 FROM information_schema.columns WHERE table_name='reviews' AND column_name='director_review_summary'")
         if db.execute(exists_sql).first() is None:
             try:
-                db.execute(text("ALTER TABLE reviews ADD COLUMN IF NOT EXISTS director_section_comments JSONB NULL"))
+                db.execute(text("ALTER TABLE reviews ADD COLUMN IF NOT EXISTS director_review_summary TEXT NULL"))
                 db.commit()
             except Exception:
                 db.rollback()
+        db.execute(
+            text("UPDATE reviews SET director_review_summary = :val WHERE id = CAST(:id AS uuid)"),
+            {"val": director_summary or None, "id": str(review.id)},
+        )
+        db.commit()
     except Exception:
-        pass
-    # Build slugs consistent with view
-    def slug(s: str) -> str:
-        return re.sub(r"[^A-Za-z0-9]+", "_", s).strip("_").lower()
-    seen = set()
-    categories = []
-    for q in selected_questions:
-        cat = q.get("category") or ""
-        if cat not in seen:
-            seen.add(cat)
-            categories.append(cat)
-    section_comments = []
-    for cat in categories:
-        val = form.get(f"sc_{slug(cat)}")
-        section_comments.append({"category": cat, "comment": val})
-
-    review.director_comments = comments
-    review.director_section_comments = section_comments
-    db.commit()
+        db.rollback()
     db.close()
 
     return templates.TemplateResponse(
