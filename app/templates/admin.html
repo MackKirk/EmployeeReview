@@ -56,7 +56,7 @@
     <div class="p-3 rounded bg-red-50 text-red-800 border border-red-200">{{ error }}</div>
   {% endif %}
 
-  <div class="flex items-center justify-between mb-3">
+  <div class="flex flex-wrap items-center gap-4 mb-3">
     <div class="flex items-center gap-2">
       <input id="admin-search" type="text" placeholder="Search name..." class="border rounded px-3 py-2 w-64" autocomplete="off" autofocus>
       <select id="admin-filter-role" class="border rounded px-2 py-2">
@@ -66,19 +66,16 @@
         {% endfor %}
       </select>
     </div>
-    <div class="flex items-center gap-4">
-      <label class="inline-flex items-center text-sm text-gray-700">
-        <input type="checkbox" id="filter-miss-sup" class="mr-2">
-        Missing supervisor
-      </label>
-      <label class="inline-flex items-center text-sm text-gray-700">
-        <input type="checkbox" id="filter-miss-dir" class="mr-2">
-        Missing director
-      </label>
-      <label class="inline-flex items-center text-sm text-gray-700">
-        <input type="checkbox" id="filter-hide-completed" class="mr-2">
-        Hide completed
-      </label>
+    <div class="flex items-center gap-2">
+      <label class="text-sm text-gray-600 font-medium">Review status:</label>
+      <select id="admin-filter-status" class="border rounded px-3 py-2 text-sm bg-white min-w-[200px]">
+        <option value="">All</option>
+        <option value="missing_employee">Missing employee (self-review)</option>
+        <option value="missing_supervisor">Missing supervisor</option>
+        <option value="missing_director">Missing director only</option>
+        <option value="missing_all">Not started (no self-review)</option>
+        <option value="completed">Completed (all done)</option>
+      </select>
     </div>
   </div>
   <div class="flex items-center justify-between mb-3">
@@ -325,16 +322,15 @@
         });
       }
 
-      // Name filter
+      // Name, role, and review-status filter
       var search = document.getElementById('admin-search');
       var roleFilter = document.getElementById('admin-filter-role');
+      var statusFilter = document.getElementById('admin-filter-status');
       var tbody = document.querySelector('#admin-table tbody');
-      var missSup = document.getElementById('filter-miss-sup');
-      var missDir = document.getElementById('filter-miss-dir');
-      var hideCompleted = document.getElementById('filter-hide-completed');
       function applyFilter() {
         var q = (search.value || '').toLowerCase().trim();
         var roleq = (roleFilter && roleFilter.value) ? roleFilter.value.toLowerCase().trim() : '';
+        var statusVal = (statusFilter && statusFilter.value) ? statusFilter.value : '';
         if (!tbody) return;
         tbody.querySelectorAll('tr').forEach(function(row){
           var nameCell = row.querySelector('td');
@@ -343,25 +339,21 @@
           var roleDisp = row.querySelector('.role-display');
           var roleTxt = roleDisp ? ((roleDisp.textContent || '').toLowerCase().trim()) : '';
           var showByRole = !roleq || roleTxt === roleq;
-          // Status checks
           var selfDone = row.querySelector('td:nth-child(5)')?.textContent.indexOf('✅') !== -1;
           var supDone = row.querySelector('td:nth-child(6)')?.textContent.indexOf('✅') !== -1;
           var dirDone = row.querySelector('td:nth-child(7)')?.textContent.indexOf('✅') !== -1;
-          var showByMissSup = !missSup || !missSup.checked || !supDone;
-          var showByMissDir = !missDir || !missDir.checked || !dirDone;
-          var showByHideCompleted = !hideCompleted || !hideCompleted.checked || !(selfDone && supDone && dirDone);
-          row.style.display = (showByName && showByRole && showByMissSup && showByMissDir && showByHideCompleted) ? '' : 'none';
+          var showByStatus = true;
+          if (statusVal === 'missing_employee') showByStatus = !selfDone;
+          else if (statusVal === 'missing_supervisor') showByStatus = selfDone && !supDone;
+          else if (statusVal === 'missing_director') showByStatus = selfDone && supDone && !dirDone;
+          else if (statusVal === 'missing_all') showByStatus = !selfDone;
+          else if (statusVal === 'completed') showByStatus = selfDone && supDone && dirDone;
+          row.style.display = (showByName && showByRole && showByStatus) ? '' : 'none';
         });
       }
-      if (search) {
-        search.addEventListener('input', applyFilter);
-      }
-      if (roleFilter) {
-        roleFilter.addEventListener('change', applyFilter);
-      }
-      if (missSup) missSup.addEventListener('change', applyFilter);
-      if (missDir) missDir.addEventListener('change', applyFilter);
-      if (hideCompleted) hideCompleted.addEventListener('change', applyFilter);
+      if (search) search.addEventListener('input', applyFilter);
+      if (roleFilter) roleFilter.addEventListener('change', applyFilter);
+      if (statusFilter) statusFilter.addEventListener('change', applyFilter);
       // Initialize from ?q=
       try {
         var params = new URLSearchParams(window.location.search);
