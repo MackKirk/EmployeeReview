@@ -2,125 +2,171 @@
 {% block title %}Director Final Review{% endblock %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto bg-white p-8 rounded-xl shadow space-y-6">
-  <h1 class="text-3xl font-bold text-gray-800">Final Review of {{ employee.name }}</h1>
+<div class="flex flex-col lg:flex-row gap-6 max-w-[1600px] mx-auto bg-white rounded-xl shadow min-h-[calc(100vh-8rem)]">
+  {# Coluna esquerda: respostas Self + Supervisor (rolável) #}
+  <div class="flex-1 min-w-0 overflow-y-auto p-6 lg:p-8 order-2 lg:order-1">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Final Review of {{ employee.name }}</h1>
 
-  {% if employee_score is not none or supervisor_score is not none %}
-  <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 mb-6">
-    <h2 class="text-xl font-bold text-gray-800 mb-4">📊 Overall Scores</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-        <div class="text-sm text-gray-600 mb-1">Employee Self-Review Score</div>
-        <div class="text-3xl font-bold text-blue-600">
-          {% if employee_score_str %}
-            {{ employee_score_str }}<span class="text-lg text-gray-500">/5.00</span>
-          {% else %}
-            <span class="text-gray-400">N/A</span>
-          {% endif %}
-        </div>
-        {% if employee_score is not none %}
-        <div class="mt-2">
-          <div class="w-full bg-gray-200 rounded-full h-2.5">
-            <div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ (employee_score / 5 * 100)|round }}%"></div>
-          </div>
-        </div>
-        {% endif %}
-      </div>
-      <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-        <div class="text-sm text-gray-600 mb-1">Supervisor Review Score</div>
-        <div class="text-3xl font-bold text-indigo-600">
-          {% if supervisor_score_str %}
-            {{ supervisor_score_str }}<span class="text-lg text-gray-500">/5.00</span>
-          {% else %}
-            <span class="text-gray-400">N/A</span>
-          {% endif %}
-        </div>
-        {% if supervisor_score is not none %}
-        <div class="mt-2">
-          <div class="w-full bg-gray-200 rounded-full h-2.5">
-            <div class="bg-indigo-600 h-2.5 rounded-full" style="width: {{ (supervisor_score / 5 * 100)|round }}%"></div>
-          </div>
-        </div>
-        {% endif %}
-      </div>
-    </div>
-    {% if employee_score is not none and supervisor_score is not none %}
-    <div class="mt-4 pt-4 border-t border-blue-200">
-      <div class="text-sm text-gray-600">
-        <span class="font-semibold">Difference:</span>
-        {% if score_diff is not none %}
-          {% if score_diff > 0 %}
-            <span class="text-green-600">Supervisor scored {{ score_diff_str }} points higher</span>
-          {% elif score_diff < 0 %}
-            <span class="text-orange-600">Employee scored {{ score_diff_str }} points higher</span>
-          {% else %}
-            <span class="text-gray-600">Scores are identical</span>
-          {% endif %}
-        {% endif %}
-      </div>
-    </div>
-    {% endif %}
-  </div>
-  {% endif %}
-
-  <form method="post" action="/director/review/{{ employee.id }}/submit" class="space-y-6">
-
-{% set ns = namespace(current_category=None) %}
-{% for q in questions %}
-  {% if q.category != ns.current_category %}
-    <h2 class="text-xl font-bold text-gray-800 mt-10 border-b pb-1">{{ q.category }}</h2>
-    {% if allow_comments %}
-    <div class="mb-4">
-      <textarea name="sc_{{ category_slugs.get(q.category) }}" rows="2" class="w-full border border-gray-300 p-2 rounded" placeholder="Director section comment">{{ section_map.get(q.category, '') }}</textarea>
-    </div>
-    {% else %}
-      {% if section_map.get(q.category) %}
-      <div class="text-sm text-gray-600 mb-2"><span class="font-semibold">Director section note:</span> {{ section_map.get(q.category) }}</div>
-      {% endif %}
-    {% endif %}
-    {% set ns.current_category = q.category %}
-  {% endif %}
-
-      {% set idx = loop.index0 %}
-      <div>
-        <p class="font-semibold text-gray-700 mb-1">{{ q.question }}</p>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 mb-2">
-          <div>
-            <span class="font-semibold">Self:</span>
-            {% set ans = review.employee_answers[idx] %}
-            {{ ans.value }}
-          </div>
-          <div>
-            <span class="font-semibold">Supervisor:</span>
-            {% set s = supervisor_map.get(q.question) %}
-            {% if s %}
-              {{ s.value }}
-              {% if s.comment %}
-                <br><em class="text-gray-500">Comment: {{ s.comment }}</em>
-              {% endif %}
+    {% if employee_score is not none or supervisor_score is not none %}
+    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 mb-6">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">📊 Overall Scores</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+          <div class="text-sm text-gray-600 mb-1">Employee Self-Review Score</div>
+          <div class="text-3xl font-bold text-blue-600">
+            {% if employee_score_str %}
+              {{ employee_score_str }}<span class="text-lg text-gray-500">/5.00</span>
             {% else %}
-              —
+              <span class="text-gray-400">N/A</span>
             {% endif %}
           </div>
+          {% if employee_score is not none %}
+          <div class="mt-2">
+            <div class="w-full bg-gray-200 rounded-full h-2.5">
+              <div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ (employee_score / 5 * 100)|round }}%"></div>
+            </div>
+          </div>
+          {% endif %}
         </div>
-        {% if allow_comments %}
-        <textarea name="c{{ q.id }}" rows="3" class="w-full border border-gray-300 p-2 rounded" placeholder="Director comment">{{ comment_map.get(q.question, '') }}</textarea>
-        {% else %}
-        {% if comment_map.get(q.question) %}
-        <div class="text-sm text-gray-600"><span class="font-semibold">Director comment:</span> {{ comment_map.get(q.question) }}</div>
-        {% endif %}
+        <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+          <div class="text-sm text-gray-600 mb-1">Supervisor Review Score</div>
+          <div class="text-3xl font-bold text-indigo-600">
+            {% if supervisor_score_str %}
+              {{ supervisor_score_str }}<span class="text-lg text-gray-500">/5.00</span>
+            {% else %}
+              <span class="text-gray-400">N/A</span>
+            {% endif %}
+          </div>
+          {% if supervisor_score is not none %}
+          <div class="mt-2">
+            <div class="w-full bg-gray-200 rounded-full h-2.5">
+              <div class="bg-indigo-600 h-2.5 rounded-full" style="width: {{ (supervisor_score / 5 * 100)|round }}%"></div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% if employee_score is not none and supervisor_score is not none %}
+      <div class="mt-4 pt-4 border-t border-blue-200">
+        <div class="text-sm text-gray-600">
+          <span class="font-semibold">Difference:</span>
+          {% if score_diff is not none %}
+            {% if score_diff > 0 %}
+              <span class="text-green-600">Supervisor scored {{ score_diff_str }} points higher</span>
+            {% elif score_diff < 0 %}
+              <span class="text-orange-600">Employee scored {{ score_diff_str }} points higher</span>
+            {% else %}
+              <span class="text-gray-600">Scores are identical</span>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# Perguntas com respostas Self | Supervisor lado a lado #}
+    {% set ns = namespace(current_category=None) %}
+    {% for q in questions %}
+      {% if q.category != ns.current_category %}
+        <h2 class="text-xl font-bold text-gray-800 mt-10 mb-3 border-b border-gray-200 pb-1">{{ q.category }}</h2>
+        {% set ns.current_category = q.category %}
+      {% endif %}
+
+      <div class="mb-6 pb-4 border-b border-gray-100">
+        <p class="font-semibold text-gray-800 mb-3">{{ q.question }}</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div class="bg-slate-50 rounded-lg p-3 border border-slate-200">
+            <span class="font-semibold text-blue-700">Self</span>
+            <div class="mt-1 text-gray-700">
+              {% set ans = review.employee_answers[loop.index0] %}
+              {{ ans.value }}
+            </div>
+          </div>
+          <div class="bg-indigo-50 rounded-lg p-3 border border-indigo-200">
+            <span class="font-semibold text-indigo-700">Supervisor</span>
+            <div class="mt-1 text-gray-700">
+              {% set s = supervisor_map.get(q.question) %}
+              {% if s %}
+                {{ s.value }}
+                {% if s.comment %}
+                  <p class="mt-2 text-gray-500 italic">Comment: {{ s.comment }}</p>
+                {% endif %}
+              {% else %}
+                —
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% if not allow_comments and comment_map.get(q.question) %}
+        <div class="mt-2 text-sm text-gray-600"><span class="font-semibold">Director comment:</span> {{ comment_map.get(q.question) }}</div>
         {% endif %}
       </div>
     {% endfor %}
+  </div>
 
-    {% if allow_comments %}
-      <div class="text-right">
-        <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition">
-          💾 Save Comments
-        </button>
+  {# Coluna direita: painel fixo — Rating Scale + formulário do diretor #}
+  <div class="w-full lg:w-[420px] xl:w-[440px] flex-shrink-0 lg:border-l border-gray-200 bg-gray-50/80 order-1 lg:order-2">
+    <div class="sticky top-4 flex flex-col max-h-[calc(100vh-2rem)]">
+      <div class="overflow-y-auto flex-1 p-4 space-y-4">
+        {# Rating scale integrado ao painel #}
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          {% if rating_panel_html %}
+            {{ rating_panel_html | safe }}
+          {% else %}
+            <div class="px-4 py-3 border-b border-gray-100 font-bold text-gray-800">Rating Scale</div>
+            <div class="p-4">
+              <table class="w-full text-sm text-gray-700 border-collapse">
+                <thead>
+                  <tr class="text-left text-gray-500 border-b border-gray-200">
+                    <th class="pb-2 pr-2">Score</th>
+                    <th class="pb-2 pr-2">Meaning</th>
+                    <th class="pb-2">Example</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="border-b border-gray-100"><td class="py-1.5 pr-2">5</td><td class="py-1.5 pr-2">Outstanding</td><td class="py-1.5">Goes above and beyond</td></tr>
+                  <tr class="border-b border-gray-100"><td class="py-1.5 pr-2">4</td><td class="py-1.5 pr-2">Above Average</td><td class="py-1.5">Often exceeds expectations</td></tr>
+                  <tr class="border-b border-gray-100"><td class="py-1.5 pr-2">3</td><td class="py-1.5 pr-2">Meets Expectations</td><td class="py-1.5">Reliable and consistent</td></tr>
+                  <tr class="border-b border-gray-100"><td class="py-1.5 pr-2">2</td><td class="py-1.5 pr-2">Needs Improvement</td><td class="py-1.5">Requires closer supervision</td></tr>
+                  <tr><td class="py-1.5 pr-2">1</td><td class="py-1.5 pr-2">Not Meeting Standards</td><td class="py-1.5">Unsafe or unprofessional</td></tr>
+                </tbody>
+              </table>
+            </div>
+          {% endif %}
+        </div>
+
+        {% if allow_comments %}
+        <form method="post" action="/director/review/{{ employee.id }}/submit" class="space-y-4">
+          <h2 class="text-lg font-bold text-gray-800 pt-2">📝 Your review for the meeting</h2>
+          <p class="text-sm text-gray-600">Use this panel while you read the answers on the left. Your notes will be saved and used in the personal meeting.</p>
+
+          {% set ns2 = namespace(current_cat=None) %}
+          {% for q in questions %}
+            {% if q.category != ns2.current_cat %}
+              <div class="pt-2">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Section: {{ q.category }}</label>
+                <textarea name="sc_{{ category_slugs.get(q.category) }}" rows="2" class="w-full border border-gray-300 p-2 rounded-lg text-sm" placeholder="Director section comment">{{ section_map.get(q.category, '') }}</textarea>
+              </div>
+              {% set ns2.current_cat = q.category %}
+            {% endif %}
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1 truncate" title="{{ q.question }}">Comment: {{ q.question[:60] }}{% if q.question|length > 60 %}…{% endif %}</label>
+              <textarea name="c{{ q.id }}" rows="2" class="w-full border border-gray-300 p-2 rounded-lg text-sm" placeholder="Director comment">{{ comment_map.get(q.question, '') }}</textarea>
+            </div>
+          {% endfor %}
+
+          <div class="pt-4 pb-2">
+            <button type="submit" class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition shadow-sm">
+              💾 Save review
+            </button>
+          </div>
+        </form>
+        {% else %}
+        <div class="text-sm text-gray-600 pt-2">Director comments are read-only here.</div>
+        {% endif %}
       </div>
-    {% endif %}
-  </form>
+    </div>
+  </div>
 </div>
 {% endblock %}
-{% include '_rating_scale.html' %}
