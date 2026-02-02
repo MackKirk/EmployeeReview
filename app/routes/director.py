@@ -296,11 +296,101 @@ async def admin_schedule(request: Request):
             for dt, name in rows:
                 if dt:
                     events.append({"employee": name, "iso": dt.isoformat()})
+
+        # Employees ready to schedule: both employee and supervisor reviews done
+        ready_rows = db.execute(text("""
+            SELECT e.id, e.name, r.employee_scheduled_at
+            FROM employees e
+            JOIN reviews r ON r.employee_id = e.id
+            WHERE r.employee_answers IS NOT NULL AND r.supervisor_answers IS NOT NULL
+            ORDER BY e.name
+        """)).all()
+        ready_to_schedule = []
+        for row in ready_rows:
+            emp_id, name, sched = row
+            ready_to_schedule.append({
+                "employee_id": str(emp_id),
+                "name": name,
+                "scheduled_at": sched.isoformat() if sched else None,
+                "scheduled_display": sched.strftime("%Y-%m-%d %H:%M") if sched else None,
+                "scheduled_time": sched.strftime("%H:%M") if sched else None,
+            })
+
         import json as _json
         return templates.TemplateResponse("admin_schedule.html", {
             "request": request,
             "events_json": _json.dumps(events),
+            "ready_to_schedule": ready_to_schedule,
+            "message": request.query_params.get("message"),
+            "error": request.query_params.get("error"),
         })
+    finally:
+        db.close()
+
+
+@router.post("/admin/schedule-employee/{employee_id}")
+async def admin_schedule_employee(request: Request, employee_id: str):
+    current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
+        return HTMLResponse("Access restricted", status_code=403)
+
+    from fastapi.responses import RedirectResponse
+    form = await request.form()
+    date_str = (form.get("date") or "").strip()
+    time_str = (form.get("time") or "").strip()
+
+    if not date_str or not time_str:
+        return RedirectResponse("/admin/schedule?error=Date+and+time+required", status_code=302)
+
+    # Parse time to 15-minute slot (HH:MM -> round to :00, :15, :30, :45)
+    try:
+        parts = time_str.split(":")
+        h, m = int(parts[0]), int(parts[1]) if len(parts) > 1 else 0
+        m = (m // 15) * 15
+        if m >= 60:
+            m = 0
+            h += 1
+        if h >= 24:
+            h = 0
+        time_str = f"{h:02d}:{m:02d}"
+    except Exception:
+        return RedirectResponse("/admin/schedule?error=Invalid+time", status_code=302)
+
+    try:
+        parsed = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+    except Exception:
+        return RedirectResponse("/admin/schedule?error=Invalid+date", status_code=302)
+
+    db: Session = SessionLocal()
+    try:
+        try:
+            exists_sql = text("SELECT 1 FROM information_schema.columns WHERE table_name='reviews' AND column_name='employee_scheduled_at'")
+            col_exists = db.execute(exists_sql).first() is not None
+        except Exception:
+            col_exists = False
+        if not col_exists:
+            db.execute(text("ALTER TABLE reviews ADD COLUMN IF NOT EXISTS employee_scheduled_at TIMESTAMP NULL"))
+            db.commit()
+
+        dup = db.execute(
+            text("SELECT 1 FROM reviews WHERE employee_scheduled_at = :dt AND employee_id <> CAST(:eid AS uuid) LIMIT 1"),
+            {"dt": parsed, "eid": employee_id},
+        ).first()
+        if dup:
+            return RedirectResponse("/admin/schedule?error=Time+slot+already+taken", status_code=302)
+
+        review = db.query(Review).options(load_only(Review.id, Review.employee_id)).filter_by(employee_id=employee_id).first()
+        if not review:
+            review = Review(employee_id=employee_id)
+            db.add(review)
+            db.flush()
+        db.execute(
+            text("UPDATE reviews SET employee_scheduled_at = :dt WHERE id = CAST(:id AS uuid)"),
+            {"dt": parsed, "id": str(review.id)},
+        )
+        db.commit()
+        return RedirectResponse("/admin/schedule?message=Meeting+scheduled", status_code=302)
     finally:
         db.close()
 
