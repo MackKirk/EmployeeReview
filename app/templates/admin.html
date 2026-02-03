@@ -153,6 +153,7 @@
             <form method="post" action="/admin/send-review-link/{{ row.employee.id }}" class="inline">
               <button class="ml-2" title="Send email">✉️</button>
             </form>
+            <a href="/admin/employee/{{ row.employee.id }}" class="ml-3 text-gray-700 hover:underline" title="Profile & extended info">📋</a>
             <a href="/director/review/{{ row.employee.id }}" class="ml-3 text-gray-700 hover:underline" title="View compare" target="_blank">👁️</a>
             <a href="/admin/open-review/{{ row.employee.id }}" class="ml-3 text-gray-700 hover:underline" title="Open as user" target="_blank">🔗</a>
           </td>

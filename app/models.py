@@ -19,6 +19,20 @@ class Employee(Base):
     is_supervisor = Column(Boolean, default=False)
     role = Column(String, default="employee")  # 'employee', 'supervisor', 'director'
 
+    # Extended profile fields
+    department = Column(String, nullable=True)
+    position = Column(String, nullable=True)
+    years_months_with_mk = Column(String, nullable=True)
+    pay_hr_last_3_years = Column(Text, nullable=True)
+    loan_amount = Column(String, nullable=True)
+    lmia = Column(String, nullable=True)  # SKILLED / UNSKILLED
+    company_phone = Column(String, nullable=True)  # Allowance or iPhone
+    company_laptop_ipad = Column(String, nullable=True)
+    drive_company_vehicle = Column(String, nullable=True)  # Y/N
+    company_gas_card = Column(String, nullable=True)  # Y/N
+    skills_trade_completed = Column(String, nullable=True)  # lvl 1, 2, 3 Red Seal
+    safety_infraction_description = Column(Text, nullable=True)
+
 class Review(Base):
     __tablename__ = "reviews"
 

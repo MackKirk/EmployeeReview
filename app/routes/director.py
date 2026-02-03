@@ -512,8 +512,83 @@ async def admin_page(request: Request):
     })
 
 
+@router.get("/admin/employee/{employee_id}", response_class=HTMLResponse)
+async def admin_employee_profile(request: Request, employee_id: str):
+    current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
+        return HTMLResponse("Access restricted", status_code=403)
+    db: Session = SessionLocal()
+    try:
+        emp = db.query(Employee).filter_by(id=employee_id).first()
+        if not emp:
+            db.close()
+            return HTMLResponse("Employee not found", status_code=404)
+        # Ensure extended profile columns exist (auto-migrate)
+        for col, typ in [
+            ("department", "VARCHAR"), ("position", "VARCHAR"), ("years_months_with_mk", "VARCHAR"),
+            ("pay_hr_last_3_years", "TEXT"), ("loan_amount", "VARCHAR"), ("lmia", "VARCHAR"),
+            ("company_phone", "VARCHAR"), ("company_laptop_ipad", "VARCHAR"),
+            ("drive_company_vehicle", "VARCHAR"), ("company_gas_card", "VARCHAR"),
+            ("skills_trade_completed", "VARCHAR"), ("safety_infraction_description", "TEXT"),
+        ]:
+            try:
+                ex = db.execute(text(
+                    "SELECT 1 FROM information_schema.columns WHERE table_name='employees' AND column_name=:c"
+                ), {"c": col}).first()
+                if not ex:
+                    db.execute(text(f"ALTER TABLE employees ADD COLUMN IF NOT EXISTS {col} {typ} NULL"))
+                    db.commit()
+            except Exception:
+                db.rollback()
+        names = [e.name for e in db.query(Employee).all()]
+        sched_value = ""
+        try:
+            r = db.query(Review).options(load_only(Review.id)).filter_by(employee_id=emp.id).first()
+            if r:
+                srow = db.execute(
+                    text("SELECT employee_scheduled_at FROM reviews WHERE id = CAST(:id AS uuid)"),
+                    {"id": str(r.id)},
+                ).first()
+                if srow and srow[0]:
+                    sched_value = srow[0].strftime("%Y-%m-%dT%H:%M")
+        except Exception:
+            pass
+        return templates.TemplateResponse("admin_employee.html", {
+            "request": request,
+            "employee": emp,
+            "names": names,
+            "allowed_roles": ["employee", "supervisor", "administration", "director"],
+            "self_scheduled_at_value": sched_value,
+            "message": request.query_params.get("message"),
+            "error": request.query_params.get("error"),
+        })
+    finally:
+        db.close()
+
+
 @router.post("/admin/update-employee/{employee_id}")
-async def admin_update_employee(request: Request, employee_id: str, role: str = Form(None), supervisor_name: str = Form(None), self_scheduled_at: str = Form(None)):
+async def admin_update_employee(
+    request: Request,
+    employee_id: str,
+    role: str = Form(None),
+    supervisor_name: str = Form(None),
+    self_scheduled_at: str = Form(None),
+    redirect_to: str = Form(None),
+    # Extended profile fields
+    department: str = Form(None),
+    position: str = Form(None),
+    years_months_with_mk: str = Form(None),
+    pay_hr_last_3_years: str = Form(None),
+    loan_amount: str = Form(None),
+    lmia: str = Form(None),
+    company_phone: str = Form(None),
+    company_laptop_ipad: str = Form(None),
+    drive_company_vehicle: str = Form(None),
+    company_gas_card: str = Form(None),
+    skills_trade_completed: str = Form(None),
+    safety_infraction_description: str = Form(None),
+):
     current_user = get_current_user(request)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
@@ -611,11 +686,38 @@ async def admin_update_employee(request: Request, employee_id: str, role: str = 
                     )
                     changed = True
 
+        # Extended profile fields
+        extended = {
+            "department": department,
+            "position": position,
+            "years_months_with_mk": years_months_with_mk,
+            "pay_hr_last_3_years": pay_hr_last_3_years,
+            "loan_amount": loan_amount,
+            "lmia": lmia,
+            "company_phone": company_phone,
+            "company_laptop_ipad": company_laptop_ipad,
+            "drive_company_vehicle": drive_company_vehicle,
+            "company_gas_card": company_gas_card,
+            "skills_trade_completed": skills_trade_completed,
+            "safety_infraction_description": safety_infraction_description,
+        }
+        for key, val in extended.items():
+            if hasattr(emp, key):
+                v = (val or "").strip() or None
+                if getattr(emp, key) != v:
+                    setattr(emp, key, v)
+                    changed = True
+
         if changed:
             db.commit()
 
         from fastapi.responses import RedirectResponse
-        return RedirectResponse("/admin?message=Employee%20updated", status_code=302)
+        target = (redirect_to or "").strip() or "/admin"
+        if "?" in target:
+            target += "&message=Saved"
+        else:
+            target += "?message=Saved"
+        return RedirectResponse(target, status_code=302)
     finally:
         db.close()
 
