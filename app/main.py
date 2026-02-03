@@ -6,6 +6,7 @@ import os
 from app.routes import auth, employee, supervisor, director, home
 from app.db import engine, SessionLocal
 from app.models import Base, Employee
+from sqlalchemy import text
 import csv
 from datetime import date, datetime
 
@@ -23,9 +24,36 @@ app.include_router(director.router)
 app.include_router(home.router)
 
 
+def _ensure_employee_extended_columns():
+    """Add extended profile columns to employees table if missing (e.g. after deploy)."""
+    cols = [
+        ("department", "VARCHAR"), ("position", "VARCHAR"), ("years_months_with_mk", "VARCHAR"),
+        ("pay_hr_last_3_years", "TEXT"), ("loan_amount", "VARCHAR"), ("lmia", "VARCHAR"),
+        ("company_phone", "VARCHAR"), ("company_laptop_ipad", "VARCHAR"),
+        ("drive_company_vehicle", "VARCHAR"), ("company_gas_card", "VARCHAR"),
+        ("skills_trade_completed", "VARCHAR"), ("safety_infraction_description", "TEXT"),
+    ]
+    db = SessionLocal()
+    try:
+        for col, typ in cols:
+            try:
+                ex = db.execute(
+                    text("SELECT 1 FROM information_schema.columns WHERE table_name='employees' AND column_name=:c"),
+                    {"c": col},
+                ).first()
+                if not ex:
+                    db.execute(text(f"ALTER TABLE employees ADD COLUMN IF NOT EXISTS {col} {typ} NULL"))
+                    db.commit()
+            except Exception:
+                db.rollback()
+    finally:
+        db.close()
+
+
 @app.on_event("startup")
 def create_tables_on_startup():
     Base.metadata.create_all(bind=engine)
+    _ensure_employee_extended_columns()
 
     # Seed from CSV if there are no employees yet
     db = SessionLocal()

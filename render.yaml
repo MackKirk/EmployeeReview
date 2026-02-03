@@ -16,4 +16,5 @@ services:
       - pip install -r requirements.txt
       - python scripts/create_db.py
       - python scripts/migrate_add_self_schedule.py
+      - python scripts/migrate_employee_extended_profile.py
 
