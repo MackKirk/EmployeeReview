@@ -110,7 +110,9 @@
       <tbody class="text-sm text-gray-700 divide-y divide-gray-200">
         {% for row in rows %}
         <tr class="hover:bg-gray-50">
-          <td class="p-3 font-medium">{{ row.employee.name }}</td>
+          <td class="p-3">
+            <button type="button" class="admin-open-profile text-left font-medium text-blue-600 hover:underline w-full" data-emp-id="{{ row.employee.id }}">{{ row.employee.name }}</button>
+          </td>
           <td class="p-3">
             <form id="row-form-{{ row.employee.id }}" method="post" action="/admin/update-employee/{{ row.employee.id }}" class="flex items-center space-x-2" data-emp-id="{{ row.employee.id }}">
               <span class="role-display" data-emp-id="{{ row.employee.id }}">{{ row.employee.role }}</span>
@@ -130,7 +132,7 @@
               </select>
           </td>
           <td class="p-3">
-              <span class="sched-display text-gray-700" data-emp-id="{{ row.employee.id }}">{{ row.self_scheduled_at_display or '—' }}</span>
+              <button type="button" class="admin-open-schedule text-left text-gray-700 hover:bg-gray-100 rounded px-1 py-0.5 w-full" data-emp-id="{{ row.employee.id }}" data-sched-value="{{ row.self_scheduled_at_value or '' }}" data-role="{{ row.employee.role }}" data-supervisor="{{ (row.employee.supervisor_email or '')|e }}"><span class="sched-display" data-emp-id="{{ row.employee.id }}">{{ row.self_scheduled_at_display or '—' }}</span></button>
               <input type="datetime-local"
                      name="self_scheduled_at"
                      value="{{ row.self_scheduled_at_value }}"
@@ -163,6 +165,106 @@
     </table>
     
   </div>
+
+  {# Modal: profile (iframe) #}
+  <div id="modal-profile" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+    <div class="fixed inset-0 bg-black/50" id="modal-profile-backdrop"></div>
+    <div class="fixed inset-4 md:inset-10 bg-white rounded-xl shadow-2xl flex flex-col z-10">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+        <h2 class="text-lg font-bold text-gray-800">Employee profile</h2>
+        <button type="button" id="modal-profile-close" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
+      </div>
+      <iframe id="modal-profile-iframe" class="flex-1 w-full min-h-0 rounded-b-xl" title="Profile"></iframe>
+    </div>
+  </div>
+
+  {# Modal: schedule (edit date) #}
+  <div id="modal-schedule" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+    <div class="fixed inset-0 bg-black/50" id="modal-schedule-backdrop"></div>
+    <div class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-xl shadow-2xl p-6 z-10">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-gray-800">Self schedule (meeting)</h2>
+        <button type="button" id="modal-schedule-close" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
+      </div>
+      <form id="modal-schedule-form" method="post" action="">
+        <input type="hidden" name="role" id="modal-sched-role">
+        <input type="hidden" name="supervisor_name" id="modal-sched-supervisor">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Date & time</label>
+          <input type="datetime-local" name="self_scheduled_at" id="modal-sched-datetime" class="w-full border border-gray-300 rounded px-3 py-2">
+        </div>
+        <div class="flex gap-2 justify-end">
+          <button type="button" id="modal-schedule-cancel" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200">Cancel</button>
+          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      // Modals: profile (iframe) and schedule
+      var modalProfile = document.getElementById('modal-profile');
+      var modalProfileIframe = document.getElementById('modal-profile-iframe');
+      var modalProfileClose = document.getElementById('modal-profile-close');
+      var modalProfileBackdrop = document.getElementById('modal-profile-backdrop');
+      var modalSchedule = document.getElementById('modal-schedule');
+      var modalScheduleForm = document.getElementById('modal-schedule-form');
+      var modalScheduleClose = document.getElementById('modal-schedule-close');
+      var modalScheduleCancel = document.getElementById('modal-schedule-cancel');
+      var modalScheduleBackdrop = document.getElementById('modal-schedule-backdrop');
+
+      function openProfileModal(empId) {
+        if (!modalProfile || !modalProfileIframe) return;
+        modalProfileIframe.src = '/admin/employee/' + empId;
+        modalProfile.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+      function closeProfileModal() {
+        if (!modalProfile) return;
+        modalProfile.classList.add('hidden');
+        modalProfileIframe.src = 'about:blank';
+        document.body.style.overflow = '';
+      }
+      function openScheduleModal(empId, schedValue, role, supervisor) {
+        if (!modalSchedule || !modalScheduleForm) return;
+        modalScheduleForm.action = '/admin/update-employee/' + empId;
+        document.getElementById('modal-sched-role').value = role || '';
+        document.getElementById('modal-sched-supervisor').value = supervisor || '';
+        document.getElementById('modal-sched-datetime').value = schedValue || '';
+        modalSchedule.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+      function closeScheduleModal() {
+        if (!modalSchedule) return;
+        modalSchedule.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+
+      if (modalProfileClose) modalProfileClose.addEventListener('click', closeProfileModal);
+      if (modalProfileBackdrop) modalProfileBackdrop.addEventListener('click', closeProfileModal);
+      if (modalScheduleClose) modalScheduleClose.addEventListener('click', closeScheduleModal);
+      if (modalScheduleCancel) modalScheduleCancel.addEventListener('click', closeScheduleModal);
+      if (modalScheduleBackdrop) modalScheduleBackdrop.addEventListener('click', closeScheduleModal);
+
+      document.querySelectorAll('.admin-open-profile').forEach(function(btn) {
+        btn.addEventListener('click', function(e) { e.preventDefault(); openProfileModal(btn.getAttribute('data-emp-id')); });
+      });
+      document.querySelectorAll('.admin-open-schedule').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+          e.preventDefault();
+          openScheduleModal(
+            btn.getAttribute('data-emp-id'),
+            btn.getAttribute('data-sched-value'),
+            btn.getAttribute('data-role'),
+            btn.getAttribute('data-supervisor')
+          );
+        });
+      });
+
+      // Schedule form submit does full POST and page reloads with new data
+    })();
+  </script>
   <script>
     (function() {
       function toggleEdit(empId, editing) {
