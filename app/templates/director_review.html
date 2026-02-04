@@ -132,6 +132,37 @@
       {% endif %}
     </div>
 
+    {# Employee info (expandable) — between Rating Scale and Summary #}
+    <details class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden group" id="employee-info-details">
+      <summary class="px-4 py-3 border-b border-gray-100 font-bold text-gray-800 cursor-pointer select-none hover:bg-gray-50 flex items-center justify-between list-none [&::-webkit-details-marker]:hidden">
+        <span>👤 {{ employee.name }} — profile</span>
+        <span class="text-gray-400 text-sm font-normal group-open:hidden">expand</span>
+        <span class="text-gray-400 text-sm font-normal hidden group-open:inline">collapse</span>
+      </summary>
+      <div class="p-4 text-sm text-gray-700 space-y-2">
+        {% if employee.department %}<div><span class="font-semibold text-gray-600">Department:</span> {{ employee.department }}</div>{% endif %}
+        {% if employee.position %}<div><span class="font-semibold text-gray-600">Position:</span> {{ employee.position }}</div>{% endif %}
+        {% if employee.years_months_with_mk %}<div><span class="font-semibold text-gray-600">Years/Months with MK:</span> {{ employee.years_months_with_mk }}</div>{% endif %}
+        {% if employee.pay_hr_last_3_years %}<div><span class="font-semibold text-gray-600">Pay/hr (last 3 years):</span> {{ employee.pay_hr_last_3_years }}</div>{% endif %}
+        {% if employee.loan_amount %}<div><span class="font-semibold text-gray-600">Loan amount:</span> {{ employee.loan_amount }}</div>{% endif %}
+        {% if employee.lmia %}<div><span class="font-semibold text-gray-600">LMIA:</span> {{ employee.lmia }}</div>{% endif %}
+        {% if employee.company_phone %}<div><span class="font-semibold text-gray-600">Company phone:</span> {{ employee.company_phone }}</div>{% endif %}
+        {% if employee.company_laptop_ipad %}<div><span class="font-semibold text-gray-600">Company laptop/iPad:</span> {{ employee.company_laptop_ipad }}</div>{% endif %}
+        {% if employee.drive_company_vehicle %}<div><span class="font-semibold text-gray-600">Drive company vehicle:</span> {{ employee.drive_company_vehicle }}</div>{% endif %}
+        {% if employee.company_gas_card %}<div><span class="font-semibold text-gray-600">Company gas card:</span> {{ employee.company_gas_card }}</div>{% endif %}
+        {% if employee.skills_trade_completed %}<div><span class="font-semibold text-gray-600">Skills trade completed:</span> {{ employee.skills_trade_completed }}</div>{% endif %}
+        {% if employee.safety_infraction_description %}
+        <div class="pt-2 border-t border-gray-100">
+          <span class="font-semibold text-gray-600">Safety infraction:</span>
+          <div class="mt-1 text-gray-600 whitespace-pre-wrap">{{ employee.safety_infraction_description }}</div>
+        </div>
+        {% endif %}
+        {% if not (employee.department or employee.position or employee.years_months_with_mk or employee.pay_hr_last_3_years or employee.loan_amount or employee.lmia or employee.company_phone or employee.company_laptop_ipad or employee.drive_company_vehicle or employee.company_gas_card or employee.skills_trade_completed or employee.safety_infraction_description) %}
+        <p class="text-gray-500">No profile info on file.</p>
+        {% endif %}
+      </div>
+    </details>
+
     {% if allow_comments %}
     <form method="post" action="/director/review/{{ employee.id }}/submit" class="space-y-3">
       <h2 class="text-lg font-bold text-gray-800">📝 Your summary for the meeting</h2>
