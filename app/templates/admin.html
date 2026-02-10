@@ -5,11 +5,20 @@
 <div class="max-w-7xl mx-auto bg-white p-8 rounded-xl shadow space-y-6">
   <h1 class="text-3xl font-bold text-gray-800">Administration</h1>
 
-  <div class="flex items-center justify-between">
+  <div class="flex items-center justify-between flex-wrap gap-3">
     <div class="space-x-2">
       <a href="/admin/questions" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200">Edit Questions</a>
       <a href="/admin/ui" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200">Edit UI Text</a>
       <a href="/admin/schedule" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200">View Schedule</a>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="/admin/employees/export" class="bg-emerald-100 text-emerald-800 px-4 py-2 rounded hover:bg-emerald-200">Export employees (CSV)</a>
+      <form method="post" action="/admin/employees/import" enctype="multipart/form-data" class="flex items-center gap-2">
+        <label class="bg-sky-100 text-sky-800 px-4 py-2 rounded hover:bg-sky-200 cursor-pointer">
+          Import employees (CSV)
+          <input type="file" name="file" accept=".csv,.txt" class="hidden" onchange="this.form.submit()">
+        </label>
+      </form>
     </div>
   </div>
 

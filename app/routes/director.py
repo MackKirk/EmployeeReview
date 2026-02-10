@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Request, Form
-from fastapi.responses import HTMLResponse
+import csv
+import io
+from fastapi import APIRouter, Request, Form, UploadFile, File
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.db import SessionLocal
@@ -811,10 +813,183 @@ async def admin_bulk_update_roles(request: Request):
                 changed += 1
         if changed:
             db.commit()
-        from fastapi.responses import RedirectResponse
         return RedirectResponse(f"/admin?message=Atualizado:%20{changed}", status_code=302)
     finally:
         db.close()
+
+# CSV columns for employees export/import (same order for round-trip)
+EMPLOYEES_CSV_COLUMNS = [
+    "id", "name", "email", "birth_date", "supervisor_email", "is_supervisor", "role",
+    "department", "position", "years_months_with_mk", "pay_hr_last_3_years", "loan_amount",
+    "lmia", "company_phone", "company_laptop_ipad", "drive_company_vehicle", "company_gas_card",
+    "skills_trade_completed", "safety_infraction_description", "self_scheduled_at",
+]
+
+
+@router.get("/admin/employees/export")
+async def admin_export_employees(request: Request):
+    current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
+        return HTMLResponse("Access restricted", status_code=403)
+    db: Session = SessionLocal()
+    try:
+        employees = db.query(Employee).order_by(Employee.name).all()
+        # Get current review's employee_scheduled_at per employee
+        review_sched = {}
+        for emp in employees:
+            r = db.query(Review).filter_by(employee_id=emp.id).first()
+            if r and getattr(r, "employee_scheduled_at", None):
+                review_sched[str(emp.id)] = r.employee_scheduled_at.strftime("%Y-%m-%d %H:%M")
+            else:
+                review_sched[str(emp.id)] = ""
+
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(EMPLOYEES_CSV_COLUMNS)
+        for emp in employees:
+            birth = emp.birth_date.strftime("%Y-%m-%d") if emp.birth_date else ""
+            row = [
+                str(emp.id),
+                emp.name or "",
+                emp.email or "",
+                birth,
+                emp.supervisor_email or "",
+                "true" if emp.is_supervisor else "false",
+                emp.role or "employee",
+                emp.department or "",
+                emp.position or "",
+                emp.years_months_with_mk or "",
+                emp.pay_hr_last_3_years or "",
+                emp.loan_amount or "",
+                emp.lmia or "",
+                emp.company_phone or "",
+                emp.company_laptop_ipad or "",
+                emp.drive_company_vehicle or "",
+                emp.company_gas_card or "",
+                emp.skills_trade_completed or "",
+                emp.safety_infraction_description or "",
+                review_sched.get(str(emp.id), ""),
+            ]
+            writer.writerow(row)
+        buf.seek(0)
+        output = io.BytesIO(buf.getvalue().encode("utf-8-sig"))
+        return StreamingResponse(
+            output,
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=employees_export.csv"},
+        )
+    finally:
+        db.close()
+
+
+@router.post("/admin/employees/import")
+async def admin_import_employees(request: Request, file: UploadFile = File(...)):
+    current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
+        return RedirectResponse("/admin?error=Access%20restricted", status_code=302)
+    if not file.filename or not file.filename.lower().endswith((".csv", ".txt")):
+        return RedirectResponse("/admin?error=Envie%20um%20arquivo%20CSV", status_code=302)
+    content = await file.read()
+    try:
+        text_content = content.decode("utf-8-sig").strip()
+    except UnicodeDecodeError:
+        try:
+            text_content = content.decode("latin-1").strip()
+        except Exception:
+            return RedirectResponse("/admin?error=Encoding%20inválido%20no%20CSV", status_code=302)
+    db: Session = SessionLocal()
+    try:
+        reader = csv.DictReader(io.StringIO(text_content))
+        if not reader.fieldnames:
+            return RedirectResponse("/admin?error=CSV%20vazio%20ou%20sem%20cabeçalho", status_code=302)
+        # Normalize headers: strip and match case-insensitively to our columns
+        header_map = {h.strip().lower(): h for h in reader.fieldnames}
+        def get_val(row, col):
+            for k, v in row.items():
+                if k and k.strip().lower() == col.lower():
+                    return (v or "").strip()
+            return ""
+        updated = 0
+        skipped = 0
+        errors = []
+        for i, row in enumerate(reader):
+            row_num = i + 2
+            emp_id = get_val(row, "id")
+            name = get_val(row, "name")
+            email = get_val(row, "email")
+            birth_str = get_val(row, "birth_date")
+            if not emp_id:
+                skipped += 1
+                continue
+            emp = None
+            try:
+                emp = db.query(Employee).filter_by(id=emp_id).first()
+            except Exception:
+                pass
+            if not emp:
+                skipped += 1
+                continue
+            if not name and not email:
+                errors.append(f"Linha {row_num}: nome e email são obrigatórios")
+                skipped += 1
+                continue
+            if emp:
+                emp.name = name
+                emp.email = email
+                if birth_str:
+                    try:
+                        from datetime import datetime as dt
+                        emp.birth_date = dt.strptime(birth_str[:10], "%Y-%m-%d").date()
+                    except ValueError:
+                        pass
+                emp.supervisor_email = get_val(row, "supervisor_email") or None
+                is_sup = get_val(row, "is_supervisor").lower() in ("true", "1", "yes", "y")
+                emp.is_supervisor = is_sup
+                role = get_val(row, "role") or "employee"
+                if role in ("employee", "supervisor", "administration", "director"):
+                    emp.role = role
+                emp.department = get_val(row, "department") or None
+                emp.position = get_val(row, "position") or None
+                emp.years_months_with_mk = get_val(row, "years_months_with_mk") or None
+                emp.pay_hr_last_3_years = get_val(row, "pay_hr_last_3_years") or None
+                emp.loan_amount = get_val(row, "loan_amount") or None
+                emp.lmia = get_val(row, "lmia") or None
+                emp.company_phone = get_val(row, "company_phone") or None
+                emp.company_laptop_ipad = get_val(row, "company_laptop_ipad") or None
+                emp.drive_company_vehicle = get_val(row, "drive_company_vehicle") or None
+                emp.company_gas_card = get_val(row, "company_gas_card") or None
+                emp.skills_trade_completed = get_val(row, "skills_trade_completed") or None
+                emp.safety_infraction_description = get_val(row, "safety_infraction_description") or None
+                updated += 1
+                # Update self_scheduled_at on current review if present
+                sched_str = get_val(row, "self_scheduled_at")
+                if sched_str:
+                    rev = db.query(Review).filter_by(employee_id=emp.id).first()
+                    if rev:
+                        try:
+                            rev.employee_scheduled_at = datetime.strptime(sched_str[:16], "%Y-%m-%d %H:%M")
+                        except ValueError:
+                            try:
+                                rev.employee_scheduled_at = datetime.strptime(sched_str[:16].replace("T", " "), "%Y-%m-%d %H:%M")
+                            except ValueError:
+                                pass
+        db.commit()
+        msg = f"Importado: {updated} atualizado(s)."
+        if skipped:
+            msg += f" {skipped} linha(s) ignorada(s) (id ausente ou não encontrado)."
+        if errors:
+            msg += " Erros: " + "; ".join(errors[:5])
+            if len(errors) > 5:
+                msg += f" (+{len(errors) - 5} mais)"
+        return RedirectResponse("/admin?message=" + msg.replace(" ", "%20"), status_code=302)
+    except Exception as e:
+        db.rollback()
+        return RedirectResponse("/admin?error=Erro%20ao%20importar:%20" + str(e).replace(" ", "%20")[:80], status_code=302)
+    finally:
+        db.close()
+
 
 @router.get("/admin/open-review/{employee_id}")
 async def admin_open_review(request: Request, employee_id: str):
