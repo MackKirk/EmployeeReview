@@ -345,11 +345,11 @@ async def admin_schedule_employee(request: Request, employee_id: str):
     if not date_str or not time_str:
         return RedirectResponse("/admin/schedule?error=Date+and+time+required", status_code=302)
 
-    # Parse time to 15-minute slot (HH:MM -> round to :00, :15, :30, :45)
+    # Parse time to 5-minute slot (HH:MM -> round to :00, :05, :10, ... :55)
     try:
         parts = time_str.split(":")
         h, m = int(parts[0]), int(parts[1]) if len(parts) > 1 else 0
-        m = (m // 15) * 15
+        m = (m // 5) * 5
         if m >= 60:
             m = 0
             h += 1

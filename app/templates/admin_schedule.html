@@ -45,7 +45,7 @@
       <div id="flat-list" class="space-y-1 text-sm text-gray-700"></div>
     </div>
     <div id="panel-pending" class="schedule-panel p-4 bg-white hidden">
-      <p class="text-sm text-gray-600 mb-4">Employees with both employee and supervisor reviews done. Pick a date and a 15‑minute slot to schedule the meeting.</p>
+      <p class="text-sm text-gray-600 mb-4">Employees with both employee and supervisor reviews done. Pick a date and a 5‑minute slot to schedule the meeting.</p>
       {% if ready_to_schedule %}
       <div class="space-y-3">
         {% for item in ready_to_schedule %}
@@ -59,7 +59,7 @@
             <select name="time" required class="border border-gray-300 rounded px-2 py-1.5 text-sm">
               <option value="">Time</option>
               {% for h in range(24) %}
-                {% for m in [0, 15, 30, 45] %}
+                {% for m in range(0, 60, 5) %}
               {% set slot = "%02d"|format(h) ~ ":" ~ "%02d"|format(m) %}
               <option value="{{ slot }}"{% if item.scheduled_time == slot %} selected{% endif %}>{{ slot }}</option>
                 {% endfor %}
