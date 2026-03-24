@@ -165,9 +165,9 @@ async def director_view_review(request: Request, employee_id: str):
         score_diff_str = f"{abs(score_diff):.2f}"
 
     return templates.TemplateResponse(
+        request,
         "director_review.html",
         {
-            "request": request,
             "employee": employee,
             "review": review,
             "questions": selected_questions,
@@ -235,9 +235,9 @@ async def save_director_comments(request: Request, employee_id: str):
     db.close()
 
     return templates.TemplateResponse(
+        request,
         "success.html",
         {
-            "request": request,
             "message": "✅ Review saved successfully!",
             "redirect_url": "/home",
             "seconds": 5,
@@ -270,8 +270,7 @@ async def director_dashboard(request: Request):
     ).all()
     db.close()
 
-    return templates.TemplateResponse("director_dashboard.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "director_dashboard.html", {
         "reviews": reviews
     })
 
@@ -332,8 +331,7 @@ async def admin_schedule(request: Request):
             })
 
         import json as _json
-        return templates.TemplateResponse("admin_schedule.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "admin_schedule.html", {
             "events_json": _json.dumps(events),
             "ready_to_schedule": ready_to_schedule,
             "message": request.query_params.get("message"),
@@ -515,8 +513,7 @@ async def admin_page(request: Request):
     finally:
         db.close()
 
-    return templates.TemplateResponse("admin.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "admin.html", {
         "rows": rows,
         "names": all_names,
         "allowed_roles": ["employee", "supervisor", "administration", "director"],
@@ -571,8 +568,7 @@ async def admin_employee_profile(request: Request, employee_id: str):
                     sched_value = srow[0].strftime("%Y-%m-%dT%H:%M")
         except Exception:
             pass
-        return templates.TemplateResponse("admin_employee.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "admin_employee.html", {
             "employee": emp,
             "names": names,
             "allowed_roles": ["employee", "supervisor", "administration", "director"],
@@ -1094,8 +1090,7 @@ async def admin_questions_editor(request: Request, role: str = "employee"):
     from app.utils.questions import get_questions_for_role
     qs = get_questions_for_role(role)
     json_text = json.dumps(qs, ensure_ascii=False, indent=2)
-    return templates.TemplateResponse("admin_questions.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "admin_questions.html", {
         "role": role,
         "json_text": json_text,
         "message": request.query_params.get("message"),
@@ -1241,8 +1236,7 @@ async def admin_ui_editor(request: Request):
         employee_email_html = default_inner
     if not supervisor_email_html:
         supervisor_email_html = (default_inner + '\n<p style="margin:0;">As a supervisor, you can use your dashboard link to review your team.</p>').strip()
-    return templates.TemplateResponse("admin_ui.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "admin_ui.html", {
         "rating_panel_html": rating_html,
         "instructions_html": instructions_html,
         "employee_email_subject": employee_email_subject,
@@ -1293,8 +1287,7 @@ async def admin_ui_preview(request: Request, rating_panel_html: str = Form(""), 
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
-    return templates.TemplateResponse("admin_ui_preview.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "admin_ui_preview.html", {
         "rating_panel_html": rating_panel_html,
         "instructions_html": instructions_html,
     })
@@ -1313,8 +1306,7 @@ async def admin_questions_preview(request: Request, role: str = Form("employee")
     except Exception as e:
         return HTMLResponse(f"Invalid JSON: {e}", status_code=400)
 
-    return templates.TemplateResponse("admin_questions_preview.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "admin_questions_preview.html", {
         "role": role,
         "questions": payload,
     })

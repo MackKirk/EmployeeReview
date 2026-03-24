@@ -77,8 +77,7 @@ async def home(request: Request):
 
     db.close()
 
-    return templates.TemplateResponse("home.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "home.html", {
         "user": user,
         "employee_card_title": employee_card_title,
         "show_supervisor_card": user.role == "supervisor" or user.is_supervisor,
@@ -109,7 +108,7 @@ async def admin_seed(request: Request):
 
 @router.get("/setup/seed", response_class=HTMLResponse)
 async def seed_setup_form(request: Request):
-    return templates.TemplateResponse("seed_setup.html", {"request": request})
+    return templates.TemplateResponse(request, "seed_setup.html")
 
 
 @router.post("/setup/seed", response_class=HTMLResponse)
@@ -117,8 +116,9 @@ async def seed_setup_submit(request: Request, password: str = Form("")):
     expected = os.getenv("SEED_PASSWORD", "seedme")
     if password != expected:
         return templates.TemplateResponse(
+            request,
             "seed_setup.html",
-            {"request": request, "error": "Invalid password."},
+            {"error": "Invalid password."},
             status_code=401,
         )
     db: Session = SessionLocal()
@@ -126,14 +126,15 @@ async def seed_setup_submit(request: Request, password: str = Form("")):
         result = seed_employees_from_csv(db)
         if not result.get("ok"):
             return templates.TemplateResponse(
+                request,
                 "seed_setup.html",
-                {"request": request, "error": f"Seed failed: {result.get('error')}"},
+                {"error": f"Seed failed: {result.get('error')}"},
                 status_code=500,
             )
         return templates.TemplateResponse(
+            request,
             "seed_setup.html",
             {
-                "request": request,
                 "success": f"Seeded from {result['path']}. Rows: {result['rows']}, created: {result['created']}, supervisor links: {result['updated']}"
             },
             status_code=200,

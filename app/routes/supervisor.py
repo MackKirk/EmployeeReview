@@ -63,8 +63,7 @@ async def supervisor_dashboard(request: Request, supervisor_id: str):
             "supervisor_done": supervisor_done,
         })
     db.close()
-    return templates.TemplateResponse("supervisor_dashboard.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "supervisor_dashboard.html", {
         "supervisor": supervisor,
         "subordinates": data,
     })
@@ -109,8 +108,7 @@ async def supervisor_review(request: Request, employee_id: str):
     rating_panel_html = get_rating_panel_html()
     # Use the employee's role so supervisor reviews the same questionnaire the employee answered
     selected_questions = get_questions_for_role(employee.role)
-    return templates.TemplateResponse("supervisor_review.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "supervisor_review.html", {
         "employee": employee,
         "questions": selected_questions,
         "existing_map": existing_map,
@@ -184,9 +182,9 @@ async def submit_supervisor_review(request: Request, employee_id: str):
     db.close()
 
     return templates.TemplateResponse(
+        request,
         "success.html",
         {
-            "request": request,
             "message": "✅ Review saved successfully!",
             "redirect_url": "/home",
             "seconds": 5,

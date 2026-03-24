@@ -45,8 +45,7 @@ async def employee_review(request: Request, employee_id: str):
     selected_questions = get_questions_for_role(employee.role)
     rating_panel_html = get_rating_panel_html()
     instructions_html = get_instructions_html()
-    return templates.TemplateResponse("employee_review.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "employee_review.html", {
         "employee": employee,
         "questions": selected_questions,
         "existing_map": existing_map,
@@ -112,9 +111,9 @@ async def submit_employee_review(request: Request, employee_id: str):
     db.close()
 
     return templates.TemplateResponse(
+        request,
         "success.html",
         {
-            "request": request,
             "message": "✅ Answers submitted successfully!",
             "redirect_url": "/home",
             "seconds": 5,

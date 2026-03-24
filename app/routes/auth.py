@@ -15,12 +15,12 @@ templates = Jinja2Templates(directory="app/templates")
 
 @router.get("/", response_class=HTMLResponse)
 async def show_login(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(request, "login.html")
 
 
 @router.get("/director-login", response_class=HTMLResponse)
 async def show_director_login(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request, "director_only": True})
+    return templates.TemplateResponse(request, "login.html", {"director_only": True})
 
 
 @router.post("/login")
@@ -35,30 +35,25 @@ async def login(
     try:
         user = db.query(Employee).filter(Employee.name == name).first()
         if not user:
-            return templates.TemplateResponse("login.html", {"request": request, "error": "User not found."})
+            return templates.TemplateResponse(request, "login.html", {"error": "User not found."})
 
         if required_role and user.role != required_role:
-            return templates.TemplateResponse("login.html", {"request": request, "error": "Access restricted.", "director_only": required_role == "director"})
+            return templates.TemplateResponse(request, "login.html", {"error": "Access restricted.", "director_only": required_role == "director"})
 
         if required_role == "director":
             if password != user.password:
                 return templates.TemplateResponse(
+                    request,
                     "login.html",
-                    {
-                        "request": request,
-                        "error": "Invalid password.",
-                        "director_only": True,
-                    },
+                    {"error": "Invalid password.", "director_only": True},
                 )
         else:
             expected = user.birth_date.strftime("%Y-%m-%d")
             if birth_date != expected:
                 return templates.TemplateResponse(
+                    request,
                     "login.html",
-                    {
-                        "request": request,
-                        "error": "Invalid birth date.",
-                    },
+                    {"error": "Invalid birth date."},
                 )
 
         request.session["user_id"] = str(user.id)
@@ -123,7 +118,7 @@ async def magic_login(request: Request, token: str):
 
 @router.get("/admin-login", response_class=HTMLResponse)
 async def show_admin_login(request: Request):
-    return templates.TemplateResponse("admin_login.html", {"request": request})
+    return templates.TemplateResponse(request, "admin_login.html")
 
 
 @router.post("/admin-login")
@@ -131,8 +126,9 @@ async def admin_login(request: Request, password: str = Form("")):
     expected = os.getenv("ADMIN_PASSWORD", "adminpass")
     if password != expected:
         return templates.TemplateResponse(
+            request,
             "admin_login.html",
-            {"request": request, "error": "Invalid password."},
+            {"error": "Invalid password."},
             status_code=401,
         )
     request.session["is_admin"] = True
