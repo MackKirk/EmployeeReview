@@ -33,6 +33,10 @@ class Employee(Base):
     skills_trade_completed = Column(String, nullable=True)  # lvl 1, 2, 3 Red Seal
     safety_infraction_description = Column(Text, nullable=True)
 
+    # Safety and Role Acknowledgment Form (admin-tracked)
+    safety_role_ack_signed = Column(Boolean, default=False)
+    safety_role_ack_signed_at = Column(Date, nullable=True)
+
 class Review(Base):
     __tablename__ = "reviews"
 

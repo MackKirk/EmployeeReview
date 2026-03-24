@@ -113,6 +113,7 @@
           <th class="p-3 text-center cursor-pointer select-none" data-sort="director_done">Director<span class="ml-1 sort-indicator"></span></th>
           <th class="p-3 text-center cursor-pointer select-none" data-sort="email">Email<span class="ml-1 sort-indicator"></span></th>
           <th class="p-3 text-center cursor-pointer select-none" data-sort="clicked">Clicked<span class="ml-1 sort-indicator"></span></th>
+          <th class="p-3 text-center cursor-pointer select-none" data-sort="ack_signed" title="Safety and Role Acknowledgment Form">S&amp;R ack<span class="ml-1 sort-indicator"></span></th>
           <th class="p-3 text-center sticky right-0 bg-gray-100">Action</th>
         </tr>
       </thead>
@@ -157,6 +158,20 @@
           <td class="p-3 text-center">{% if row.director_done %}✅{% else %}❌{% endif %}</td>
           <td class="p-3 text-center">{% if row.has_sent %}📧{% else %}—{% endif %}</td>
           <td class="p-3 text-center">{% if row.has_clicked %}🟢{% else %}—{% endif %}</td>
+          <td class="p-3 text-center">
+            <button type="button"
+                    class="admin-open-safety-ack inline-flex items-center justify-center w-8 h-8 rounded border border-gray-300 bg-white hover:bg-gray-50 align-middle"
+                    data-emp-id="{{ row.employee.id }}"
+                    data-signed="{{ '1' if row.employee.safety_role_ack_signed else '0' }}"
+                    data-signed-at="{{ row.employee.safety_role_ack_signed_at.strftime('%Y-%m-%d') if row.employee.safety_role_ack_signed_at else '' }}"
+                    title="{% if row.employee.safety_role_ack_signed and row.employee.safety_role_ack_signed_at %}Signed on {{ row.employee.safety_role_ack_signed_at.strftime('%Y-%m-%d') }}{% elif row.employee.safety_role_ack_signed %}Signed (no date set){% else %}Not signed — click to edit{% endif %}">
+              {% if row.employee.safety_role_ack_signed %}
+              <span class="text-green-600 text-lg leading-none" aria-hidden="true">☑</span>
+              {% else %}
+              <span class="text-gray-400 text-lg leading-none" aria-hidden="true">☐</span>
+              {% endif %}
+            </button>
+          </td>
           <td class="p-3 text-center sticky right-0 bg-white">
               <button type="button" class="edit-row text-gray-700 hover:text-black" title="Edit" data-emp-id="{{ row.employee.id }}">✏️</button>
               <button type="submit" class="save-row ml-2 bg-gray-100 px-2 py-1 rounded hover:bg-gray-200" style="display:none;" title="Save" data-emp-id="{{ row.employee.id }}" form="row-form-{{ row.employee.id }}">💾</button>
@@ -204,6 +219,32 @@
         </div>
         <div class="flex gap-2 justify-end">
           <button type="button" id="modal-schedule-cancel" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200">Cancel</button>
+          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# Modal: Safety and Role Acknowledgment Form #}
+  <div id="modal-safety-ack" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+    <div class="fixed inset-0 bg-black/50" id="modal-safety-ack-backdrop"></div>
+    <div class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-xl shadow-2xl p-6 z-10">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-gray-800">Safety and Role Acknowledgment</h2>
+        <button type="button" id="modal-safety-ack-close" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
+      </div>
+      <form id="modal-safety-ack-form" method="post" action="">
+        <p class="text-sm text-gray-600 mb-4">Mark whether the Safety and Role Acknowledgment Form was signed and the date.</p>
+        <label class="flex items-center gap-2 mb-4 cursor-pointer">
+          <input type="checkbox" name="safety_role_ack_signed" value="1" id="modal-safety-ack-signed" class="rounded border-gray-300 w-4 h-4">
+          <span class="text-sm text-gray-800">Form signed</span>
+        </label>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Date signed</label>
+          <input type="date" name="safety_role_ack_signed_at" id="modal-safety-ack-date" class="w-full border border-gray-300 rounded px-3 py-2">
+        </div>
+        <div class="flex gap-2 justify-end">
+          <button type="button" id="modal-safety-ack-cancel" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200">Cancel</button>
           <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Save</button>
         </div>
       </form>
@@ -272,6 +313,42 @@
       });
 
       // Schedule form submit does full POST and page reloads with new data
+
+      // Modal: Safety & Role Acknowledgment
+      var modalSafetyAck = document.getElementById('modal-safety-ack');
+      var modalSafetyAckForm = document.getElementById('modal-safety-ack-form');
+      var modalSafetyAckClose = document.getElementById('modal-safety-ack-close');
+      var modalSafetyAckCancel = document.getElementById('modal-safety-ack-cancel');
+      var modalSafetyAckBackdrop = document.getElementById('modal-safety-ack-backdrop');
+      var modalSafetyAckSigned = document.getElementById('modal-safety-ack-signed');
+      var modalSafetyAckDate = document.getElementById('modal-safety-ack-date');
+      function closeSafetyAckModal() {
+        if (!modalSafetyAck) return;
+        modalSafetyAck.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+      function openSafetyAckModal(empId, signed, signedAt) {
+        if (!modalSafetyAck || !modalSafetyAckForm) return;
+        modalSafetyAckForm.action = '/admin/update-safety-role-ack/' + empId;
+        if (modalSafetyAckSigned) modalSafetyAckSigned.checked = signed === '1' || signed === true;
+        if (modalSafetyAckDate) modalSafetyAckDate.value = signedAt || '';
+        modalSafetyAck.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+      document.querySelectorAll('.admin-open-safety-ack').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+          e.preventDefault();
+          openSafetyAckModal(btn.getAttribute('data-emp-id'), btn.getAttribute('data-signed'), btn.getAttribute('data-signed-at'));
+        });
+      });
+      if (modalSafetyAckClose) modalSafetyAckClose.addEventListener('click', closeSafetyAckModal);
+      if (modalSafetyAckCancel) modalSafetyAckCancel.addEventListener('click', closeSafetyAckModal);
+      if (modalSafetyAckBackdrop) modalSafetyAckBackdrop.addEventListener('click', closeSafetyAckModal);
+      if (modalSafetyAckSigned && modalSafetyAckDate) {
+        modalSafetyAckSigned.addEventListener('change', function() {
+          if (!modalSafetyAckSigned.checked) modalSafetyAckDate.value = '';
+        });
+      }
     })();
   </script>
   <script>
@@ -454,6 +531,7 @@
           var selfDone = row.querySelector('td:nth-child(5)')?.textContent.indexOf('✅') !== -1;
           var supDone = row.querySelector('td:nth-child(6)')?.textContent.indexOf('✅') !== -1;
           var dirDone = row.querySelector('td:nth-child(7)')?.textContent.indexOf('✅') !== -1;
+          // columns 8–11: email, clicked, S&R ack, action
           var showByStatus = true;
           if (statusVal === 'missing_employee') showByStatus = !selfDone;
           else if (statusVal === 'missing_supervisor') showByStatus = selfDone && !supDone;
@@ -500,6 +578,8 @@
             return row.querySelector('td:nth-child(8)')?.textContent.indexOf('📧') !== -1 ? 1 : 0;
           case 'clicked':
             return row.querySelector('td:nth-child(9)')?.textContent.indexOf('🟢') !== -1 ? 1 : 0;
+          case 'ack_signed':
+            return row.querySelector('.admin-open-safety-ack')?.getAttribute('data-signed') === '1' ? 1 : 0;
           default:
             return '';
         }

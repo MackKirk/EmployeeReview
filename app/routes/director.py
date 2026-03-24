@@ -12,7 +12,7 @@ from app.utils.auth_utils import generate_magic_login_token
 import os
 import json
 from app.utils.ui_overrides import get_rating_panel_html
-from datetime import datetime
+from datetime import datetime, date as date_type
 import re
 from sqlalchemy.orm import load_only
 from sqlalchemy import text
@@ -20,6 +20,19 @@ from app.utils.email import build_review_invite_email
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+
+
+def _ensure_safety_ack_columns(db: Session) -> None:
+    for stmt in (
+        "ALTER TABLE employees ADD COLUMN IF NOT EXISTS safety_role_ack_signed BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE employees ADD COLUMN IF NOT EXISTS safety_role_ack_signed_at DATE NULL",
+    ):
+        try:
+            db.execute(text(stmt))
+            db.commit()
+        except Exception:
+            db.rollback()
+
 
 @router.get("/director/review/{employee_id}", response_class=HTMLResponse)
 async def director_view_review(request: Request, employee_id: str):
@@ -406,6 +419,7 @@ async def admin_page(request: Request):
 
     db: Session = SessionLocal()
     try:
+        _ensure_safety_ack_columns(db)
         from sqlalchemy.orm import joinedload
         employees = db.query(Employee).all()
         # Check if schedule column exists to avoid 500 before migration runs
@@ -533,6 +547,7 @@ async def admin_employee_profile(request: Request, employee_id: str):
             ("company_phone", "VARCHAR"), ("company_laptop_ipad", "VARCHAR"),
             ("drive_company_vehicle", "VARCHAR"), ("company_gas_card", "VARCHAR"),
             ("skills_trade_completed", "VARCHAR"), ("safety_infraction_description", "TEXT"),
+            ("safety_role_ack_signed", "BOOLEAN"), ("safety_role_ack_signed_at", "DATE"),
         ]:
             try:
                 ex = db.execute(text(
@@ -724,6 +739,42 @@ async def admin_update_employee(
         db.close()
 
 
+@router.post("/admin/update-safety-role-ack/{employee_id}")
+async def admin_update_safety_role_ack(
+    request: Request,
+    employee_id: str,
+    safety_role_ack_signed: str = Form(None),
+    safety_role_ack_signed_at: str = Form(None),
+):
+    current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
+        return HTMLResponse("Access restricted", status_code=403)
+    db: Session = SessionLocal()
+    try:
+        _ensure_safety_ack_columns(db)
+        emp = db.query(Employee).filter_by(id=employee_id).first()
+        if not emp:
+            return HTMLResponse("Employee not found", status_code=404)
+        signed = (safety_role_ack_signed or "").strip().lower() in ("1", "on", "true", "yes")
+        date_str = (safety_role_ack_signed_at or "").strip()
+        emp.safety_role_ack_signed = signed
+        if signed:
+            if date_str:
+                try:
+                    emp.safety_role_ack_signed_at = datetime.strptime(date_str[:10], "%Y-%m-%d").date()
+                except ValueError:
+                    return RedirectResponse("/admin?error=Invalid%20acknowledgment%20date", status_code=302)
+            else:
+                emp.safety_role_ack_signed_at = date_type.today()
+        else:
+            emp.safety_role_ack_signed_at = None
+        db.commit()
+        return RedirectResponse("/admin?message=Safety%20acknowledgment%20updated", status_code=302)
+    finally:
+        db.close()
+
+
 @router.post("/admin/bulk-update-supervisors", response_class=HTMLResponse)
 async def admin_bulk_update_supervisors(request: Request):
     current_user = get_current_user(request)
@@ -822,7 +873,8 @@ EMPLOYEES_CSV_COLUMNS = [
     "id", "name", "email", "birth_date", "supervisor_email", "is_supervisor", "role",
     "department", "position", "years_months_with_mk", "pay_hr_last_3_years", "loan_amount",
     "lmia", "company_phone", "company_laptop_ipad", "drive_company_vehicle", "company_gas_card",
-    "skills_trade_completed", "safety_infraction_description", "self_scheduled_at",
+    "skills_trade_completed", "safety_infraction_description",
+    "safety_role_ack_signed", "safety_role_ack_signed_at", "self_scheduled_at",
 ]
 
 
@@ -834,6 +886,7 @@ async def admin_export_employees(request: Request):
         return HTMLResponse("Access restricted", status_code=403)
     db: Session = SessionLocal()
     try:
+        _ensure_safety_ack_columns(db)
         employees = db.query(Employee).order_by(Employee.name).all()
         # Get current review's employee_scheduled_at per employee
         review_sched = {}
@@ -869,6 +922,8 @@ async def admin_export_employees(request: Request):
                 emp.company_gas_card or "",
                 emp.skills_trade_completed or "",
                 emp.safety_infraction_description or "",
+                "true" if getattr(emp, "safety_role_ack_signed", None) else "false",
+                emp.safety_role_ack_signed_at.strftime("%Y-%m-%d") if getattr(emp, "safety_role_ack_signed_at", None) else "",
                 review_sched.get(str(emp.id), ""),
             ]
             writer.writerow(row)
@@ -901,11 +956,13 @@ async def admin_import_employees(request: Request, file: UploadFile = File(...))
             return RedirectResponse("/admin?error=Encoding%20inválido%20no%20CSV", status_code=302)
     db: Session = SessionLocal()
     try:
+        _ensure_safety_ack_columns(db)
         reader = csv.DictReader(io.StringIO(text_content))
         if not reader.fieldnames:
             return RedirectResponse("/admin?error=CSV%20vazio%20ou%20sem%20cabeçalho", status_code=302)
         # Normalize headers: strip and match case-insensitively to our columns
         header_map = {h.strip().lower(): h for h in reader.fieldnames}
+        csv_has_safety_ack = "safety_role_ack_signed" in header_map
         def get_val(row, col):
             for k, v in row.items():
                 if k and k.strip().lower() == col.lower():
@@ -962,6 +1019,16 @@ async def admin_import_employees(request: Request, file: UploadFile = File(...))
                 emp.company_gas_card = get_val(row, "company_gas_card") or None
                 emp.skills_trade_completed = get_val(row, "skills_trade_completed") or None
                 emp.safety_infraction_description = get_val(row, "safety_infraction_description") or None
+                if csv_has_safety_ack:
+                    emp.safety_role_ack_signed = get_val(row, "safety_role_ack_signed").lower() in ("true", "1", "yes", "y")
+                    ack_d = get_val(row, "safety_role_ack_signed_at")
+                    if ack_d:
+                        try:
+                            emp.safety_role_ack_signed_at = datetime.strptime(ack_d[:10], "%Y-%m-%d").date()
+                        except ValueError:
+                            pass
+                    elif not emp.safety_role_ack_signed:
+                        emp.safety_role_ack_signed_at = None
                 updated += 1
                 # Update self_scheduled_at on current review if present
                 sched_str = get_val(row, "self_scheduled_at")

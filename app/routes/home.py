@@ -9,6 +9,7 @@ from app.utils.auth_utils import generate_magic_login_token
 from app.utils.email import send_email, build_review_invite_email, send_email_verbose
 from app.utils.seed import seed_employees_from_csv
 import os
+from urllib.parse import quote
 from sqlalchemy.orm import load_only
 
 router = APIRouter()
@@ -207,7 +208,7 @@ async def admin_send_review_link(request: Request, employee_id: str):
         except Exception:
             db.rollback()
         # Redirect back to admin page with a flash-like message via querystring
-        return RedirectResponse("/admin?message=Email%20sent%20to%20{emp.name}", status_code=302)
+        return RedirectResponse(f"/admin?message={quote('Email sent to ' + emp.name)}", status_code=302)
     finally:
         db.close()
 
