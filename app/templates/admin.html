@@ -5,24 +5,28 @@
 <div class="max-w-7xl mx-auto bg-white p-8 rounded-xl shadow space-y-6">
   <h1 class="text-3xl font-bold text-gray-800">Administration</h1>
 
-  <div class="flex items-center justify-between flex-wrap gap-3">
-    <div class="space-x-2 flex flex-wrap items-center gap-2">
-      <a href="/admin/questions" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200">Edit Questions</a>
-      <a href="/admin/ui" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200">Edit UI Text</a>
-      <a href="/admin/schedule" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200">View Schedule</a>
-      <button type="button" id="btn-open-new-employee" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">New employee</button>
+  <nav class="rounded-xl border border-gray-200/90 bg-gradient-to-b from-gray-50/90 to-white p-3 shadow-sm ring-1 ring-gray-100" aria-label="Admin shortcuts">
+    <div class="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between lg:gap-x-6 lg:gap-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="w-full text-[11px] font-semibold uppercase tracking-wider text-gray-400 lg:mr-1 lg:inline lg:w-auto">Content</span>
+        <a href="/admin/questions" class="inline-flex min-h-[2.5rem] items-center justify-center rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50">Edit Questions</a>
+        <a href="/admin/ui" class="inline-flex min-h-[2.5rem] items-center justify-center rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50">Edit UI Text</a>
+        <a href="/admin/schedule" class="inline-flex min-h-[2.5rem] items-center justify-center rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50">View Schedule</a>
+        <button type="button" id="btn-open-new-employee" class="inline-flex min-h-[2.5rem] items-center justify-center rounded-lg border border-blue-600 bg-blue-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-1">New employee</button>
+      </div>
+      <div class="flex flex-wrap items-center gap-2 border-t border-gray-200 pt-3 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+        <span class="w-full text-[11px] font-semibold uppercase tracking-wider text-gray-400 lg:mr-1 lg:inline lg:w-auto">Employees</span>
+        <a href="/admin/former" class="inline-flex min-h-[2.5rem] items-center justify-center rounded-lg border border-amber-200 bg-amber-50/90 px-3.5 py-2 text-sm font-medium text-amber-950 shadow-sm transition hover:border-amber-300 hover:bg-amber-100">Former employees (archived)</a>
+        <a href="/admin/employees/export" class="inline-flex min-h-[2.5rem] items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50/90 px-3.5 py-2 text-sm font-medium text-emerald-900 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-100">Export employees (CSV)</a>
+        <form method="post" action="/admin/employees/import" enctype="multipart/form-data" class="inline m-0">
+          <label class="inline-flex min-h-[2.5rem] cursor-pointer items-center justify-center rounded-lg border border-sky-200 bg-sky-50/90 px-3.5 py-2 text-sm font-medium text-sky-950 shadow-sm transition hover:border-sky-300 hover:bg-sky-100">
+            Import employees (CSV)
+            <input type="file" name="file" accept=".csv,.txt" class="hidden" onchange="this.form.submit()">
+          </label>
+        </form>
+      </div>
     </div>
-    <div class="flex items-center gap-2 flex-wrap">
-      <a href="/admin/former" class="bg-amber-100 text-amber-900 px-4 py-2 rounded hover:bg-amber-200">Former employees (archived)</a>
-      <a href="/admin/employees/export" class="bg-emerald-100 text-emerald-800 px-4 py-2 rounded hover:bg-emerald-200">Export employees (CSV)</a>
-      <form method="post" action="/admin/employees/import" enctype="multipart/form-data" class="flex items-center gap-2">
-        <label class="bg-sky-100 text-sky-800 px-4 py-2 rounded hover:bg-sky-200 cursor-pointer">
-          Import employees (CSV)
-          <input type="file" name="file" accept=".csv,.txt" class="hidden" onchange="this.form.submit()">
-        </label>
-      </form>
-    </div>
-  </div>
+  </nav>
 
   <style>
     #danger-zone-details > summary { list-style: none; }
@@ -60,7 +64,7 @@
           <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:bg-red-700">Send to All</button>
         </form>
         <form method="post" action="/admin/send-reminders" class="inline" data-confirm>
-          <button type="submit" class="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:bg-orange-700">Send Reminders (Not Completed) <span class="font-bold">({{ employee_pending }} pending)</span></button>
+          <button type="submit" class="bg-orange-100 text-gray-900 border border-orange-300 px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:bg-orange-200">Send Reminders (Not Completed) <span class="font-bold">({{ employee_pending }} pending)</span></button>
         </form>
         <form method="post" action="/admin/send-test-email" class="inline-flex flex-wrap items-center gap-2" onsubmit="return confirm('Send a test email?');">
           <input type="email" name="to" placeholder="test@example.com" class="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white min-w-[200px]" required>
