@@ -758,7 +758,6 @@ async def admin_create_employee(
     birth_date: str = Form(None),
     role: str = Form("employee"),
     supervisor_name: str = Form(None),
-    director_password: str = Form(None),
 ):
     current_user = get_current_user(request)
     is_admin = bool(request.session.get("is_admin"))
@@ -785,7 +784,8 @@ async def admin_create_employee(
 
         pwd = None
         if role_val == "director":
-            pwd = (director_password or "").strip() or os.getenv("DEFAULT_DIRECTOR_PASSWORD", "directorpass")
+            # Not collected in UI; director-login password page still uses this env default if set
+            pwd = os.getenv("DEFAULT_DIRECTOR_PASSWORD", "directorpass")
 
         sup_name = (supervisor_name or "").strip() or None
         emp = Employee(
