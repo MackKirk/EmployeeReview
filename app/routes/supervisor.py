@@ -40,7 +40,10 @@ async def supervisor_dashboard(request: Request, supervisor_id: str):
             "Supervisor not found or access denied", status_code=403
         )
 
-    subordinates = db.query(Employee).filter_by(supervisor_email=supervisor.name).all()
+    subordinates = db.query(Employee).filter(
+        Employee.supervisor_email == supervisor.name,
+        Employee.deleted_at.is_(None),
+    ).all()
     data = []
     for emp in subordinates:
         r = db.query(Review).options(
@@ -83,7 +86,10 @@ async def supervisor_review(request: Request, employee_id: str):
         if is_admin or current_user.role == "director":
             allowed = True
         elif current_user.role == "supervisor" or current_user.is_supervisor:
-            allowed = (current_user.name == employee.supervisor_email)
+            if getattr(employee, "deleted_at", None) is not None:
+                allowed = False
+            else:
+                allowed = current_user.name == employee.supervisor_email
     if not allowed:
         db.close()
         return HTMLResponse("Access denied", status_code=403)
@@ -132,7 +138,10 @@ async def submit_supervisor_review(request: Request, employee_id: str):
         if is_admin or current_user.role == "director":
             allowed = True
         elif current_user.role == "supervisor" or current_user.is_supervisor:
-            allowed = (current_user.name == employee.supervisor_email)
+            if getattr(employee, "deleted_at", None) is not None:
+                allowed = False
+            else:
+                allowed = current_user.name == employee.supervisor_email
     if not allowed:
         db.close()
         return HTMLResponse("Access denied", status_code=403)

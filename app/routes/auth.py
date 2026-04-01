@@ -37,6 +37,9 @@ async def login(
         if not user:
             return templates.TemplateResponse(request, "login.html", {"error": "User not found."})
 
+        if getattr(user, "deleted_at", None) is not None:
+            return templates.TemplateResponse(request, "login.html", {"error": "Access denied.", "director_only": required_role == "director"})
+
         if required_role and user.role != required_role:
             return templates.TemplateResponse(request, "login.html", {"error": "Access restricted.", "director_only": required_role == "director"})
 
@@ -75,7 +78,7 @@ async def logout(request: Request):
 @router.get("/usernames")
 def get_usernames(role: str = None, exclude_directors: bool = False):
     db = SessionLocal()
-    query = db.query(Employee.name)
+    query = db.query(Employee.name).filter(Employee.deleted_at.is_(None))
     if role:
         query = query.filter(Employee.role == role)
     elif exclude_directors:
@@ -96,6 +99,8 @@ async def magic_login(request: Request, token: str):
         user = db.query(Employee).filter(Employee.id == data.get("user_id")).first()
         if not user:
             return HTMLResponse("User not found.", status_code=404)
+        if getattr(user, "deleted_at", None) is not None:
+            return HTMLResponse("Access denied.", status_code=403)
 
         # Create session
         request.session["user_id"] = str(user.id)

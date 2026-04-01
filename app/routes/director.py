@@ -17,9 +17,18 @@ import re
 from sqlalchemy.orm import load_only
 from sqlalchemy import text
 from app.utils.email import build_review_invite_email
+from app.utils.seed import make_email_from_name, _parse_birthdate
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+
+
+def _ensure_deleted_at_column(db: Session) -> None:
+    try:
+        db.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL"))
+        db.commit()
+    except Exception:
+        db.rollback()
 
 
 def _ensure_safety_ack_columns(db: Session) -> None:
@@ -284,6 +293,7 @@ async def admin_schedule(request: Request):
 
     db: Session = SessionLocal()
     try:
+        _ensure_deleted_at_column(db)
         # Ensure column exists (auto-migrate if needed)
         col_exists = False
         try:
@@ -305,6 +315,7 @@ async def admin_schedule(request: Request):
                 FROM reviews r
                 JOIN employees e ON e.id = r.employee_id
                 WHERE r.employee_scheduled_at IS NOT NULL
+                  AND e.deleted_at IS NULL
                 ORDER BY r.employee_scheduled_at ASC
             """)).all()
             for dt, name in rows:
@@ -317,6 +328,7 @@ async def admin_schedule(request: Request):
             FROM employees e
             JOIN reviews r ON r.employee_id = e.id
             WHERE r.employee_answers IS NOT NULL AND r.supervisor_answers IS NOT NULL
+              AND e.deleted_at IS NULL
             ORDER BY e.name
         """)).all()
         ready_to_schedule = []
@@ -418,8 +430,9 @@ async def admin_page(request: Request):
     db: Session = SessionLocal()
     try:
         _ensure_safety_ack_columns(db)
+        _ensure_deleted_at_column(db)
         from sqlalchemy.orm import joinedload
-        employees = db.query(Employee).all()
+        employees = db.query(Employee).filter(Employee.deleted_at.is_(None)).order_by(Employee.name).all()
         # Check if schedule column exists to avoid 500 before migration runs
         col_exists = False
         try:
@@ -533,6 +546,7 @@ async def admin_employee_profile(request: Request, employee_id: str):
         return HTMLResponse("Access restricted", status_code=403)
     db: Session = SessionLocal()
     try:
+        _ensure_deleted_at_column(db)
         emp = db.query(Employee).filter_by(id=employee_id).first()
         if not emp:
             db.close()
@@ -555,7 +569,7 @@ async def admin_employee_profile(request: Request, employee_id: str):
                     db.commit()
             except Exception:
                 db.rollback()
-        names = [e.name for e in db.query(Employee).all()]
+        names = [e.name for e in db.query(Employee).filter(Employee.deleted_at.is_(None)).order_by(Employee.name).all()]
         sched_value = ""
         try:
             r = db.query(Review).options(load_only(Review.id)).filter_by(employee_id=emp.id).first()
@@ -575,6 +589,7 @@ async def admin_employee_profile(request: Request, employee_id: str):
             "self_scheduled_at_value": sched_value,
             "message": request.query_params.get("message"),
             "error": request.query_params.get("error"),
+            "is_former": getattr(emp, "deleted_at", None) is not None,
         })
     finally:
         db.close()
@@ -679,7 +694,7 @@ async def admin_update_employee(
                 ).first()
                 if dup:
                     from fastapi.responses import RedirectResponse
-                    return RedirectResponse("/admin?error=Já%20existe%20um%20agendamento%20com%20esta%20data%20e%20hora", status_code=302)
+                    return RedirectResponse("/admin?error=Time%20slot%20already%20taken", status_code=302)
                 # Update via direct SQL to avoid ORM selecting missing columns
                 if review and getattr(review, "id", None):
                     db.execute(
@@ -731,6 +746,126 @@ async def admin_update_employee(
         else:
             target += "?message=Saved"
         return RedirectResponse(target, status_code=302)
+    finally:
+        db.close()
+
+
+@router.post("/admin/create-employee")
+async def admin_create_employee(
+    request: Request,
+    name: str = Form(...),
+    email: str = Form(None),
+    birth_date: str = Form(None),
+    role: str = Form("employee"),
+    supervisor_name: str = Form(None),
+    director_password: str = Form(None),
+):
+    current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
+        return HTMLResponse("Access restricted", status_code=403)
+
+    allowed = {"employee", "supervisor", "administration", "director"}
+    role_val = (role or "").strip().lower()
+    if role_val not in allowed:
+        return RedirectResponse("/admin?error=Invalid%20role", status_code=302)
+
+    name_val = (name or "").strip()
+    if not name_val:
+        return RedirectResponse("/admin?error=Name%20is%20required", status_code=302)
+
+    email_val = (email or "").strip() or make_email_from_name(name_val)
+    bd = _parse_birthdate(birth_date or "")
+
+    db: Session = SessionLocal()
+    try:
+        _ensure_deleted_at_column(db)
+        if db.query(Employee).filter(Employee.email == email_val).first():
+            return RedirectResponse("/admin?error=Email%20already%20registered", status_code=302)
+
+        pwd = None
+        if role_val == "director":
+            pwd = (director_password or "").strip() or os.getenv("DEFAULT_DIRECTOR_PASSWORD", "directorpass")
+
+        sup_name = (supervisor_name or "").strip() or None
+        emp = Employee(
+            name=name_val,
+            email=email_val,
+            birth_date=bd,
+            role=role_val,
+            password=pwd,
+            supervisor_email=sup_name,
+            is_supervisor=(role_val == "supervisor"),
+        )
+        db.add(emp)
+        if sup_name:
+            sup_emp = db.query(Employee).filter(Employee.name == sup_name, Employee.deleted_at.is_(None)).first()
+            if sup_emp and not sup_emp.is_supervisor:
+                sup_emp.is_supervisor = True
+        db.commit()
+        return RedirectResponse("/admin?message=" + name_val.replace(" ", "%20") + "%20registered", status_code=302)
+    finally:
+        db.close()
+
+
+@router.post("/admin/employee/{employee_id}/deactivate")
+async def admin_deactivate_employee(request: Request, employee_id: str):
+    current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
+        return HTMLResponse("Access restricted", status_code=403)
+
+    db: Session = SessionLocal()
+    try:
+        _ensure_deleted_at_column(db)
+        emp = db.query(Employee).filter_by(id=employee_id).first()
+        if not emp:
+            return HTMLResponse("Employee not found", status_code=404)
+        if getattr(emp, "deleted_at", None) is None:
+            emp.deleted_at = datetime.utcnow()
+            db.commit()
+        return RedirectResponse("/admin?message=" + (emp.name or "OK").replace(" ", "%20") + "%20marked%20as%20departed", status_code=302)
+    finally:
+        db.close()
+
+
+@router.post("/admin/employee/{employee_id}/restore")
+async def admin_restore_employee(request: Request, employee_id: str):
+    current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
+        return HTMLResponse("Access restricted", status_code=403)
+
+    db: Session = SessionLocal()
+    try:
+        _ensure_deleted_at_column(db)
+        emp = db.query(Employee).filter_by(id=employee_id).first()
+        if not emp:
+            return HTMLResponse("Employee not found", status_code=404)
+        if getattr(emp, "deleted_at", None) is not None:
+            emp.deleted_at = None
+            db.commit()
+        return RedirectResponse("/admin/former?message=" + (emp.name or "OK").replace(" ", "%20") + "%20restored", status_code=302)
+    finally:
+        db.close()
+
+
+@router.get("/admin/former", response_class=HTMLResponse)
+async def admin_former_employees(request: Request):
+    current_user = get_current_user(request)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((current_user and current_user.role == "director") or is_admin):
+        return HTMLResponse("Access restricted", status_code=403)
+
+    db: Session = SessionLocal()
+    try:
+        _ensure_deleted_at_column(db)
+        former = db.query(Employee).filter(Employee.deleted_at.isnot(None)).order_by(Employee.deleted_at.desc()).all()
+        return templates.TemplateResponse(request, "admin_former.html", {
+            "employees": former,
+            "message": request.query_params.get("message"),
+            "error": request.query_params.get("error"),
+        })
     finally:
         db.close()
 
@@ -793,7 +928,7 @@ async def admin_bulk_update_supervisors(request: Request):
 
     if not updates:
         from fastapi.responses import RedirectResponse
-        return RedirectResponse("/admin?error=Nenhuma%20alteração%20informada", status_code=302)
+        return RedirectResponse("/admin?error=No%20changes%20provided", status_code=302)
 
     db: Session = SessionLocal()
     changed = 0
@@ -812,7 +947,7 @@ async def admin_bulk_update_supervisors(request: Request):
         if changed:
             db.commit()
         from fastapi.responses import RedirectResponse
-        return RedirectResponse(f"/admin?message=Atualizado:%20{changed}", status_code=302)
+        return RedirectResponse(f"/admin?message=Updated:%20{changed}", status_code=302)
     finally:
         db.close()
 
@@ -840,7 +975,7 @@ async def admin_bulk_update_roles(request: Request):
 
     if not updates:
         from fastapi.responses import RedirectResponse
-        return RedirectResponse("/admin?error=Nenhuma%20alteração%20informada", status_code=302)
+        return RedirectResponse("/admin?error=No%20changes%20provided", status_code=302)
 
     db: Session = SessionLocal()
     changed = 0
@@ -860,7 +995,7 @@ async def admin_bulk_update_roles(request: Request):
                 changed += 1
         if changed:
             db.commit()
-        return RedirectResponse(f"/admin?message=Atualizado:%20{changed}", status_code=302)
+        return RedirectResponse(f"/admin?message=Updated:%20{changed}", status_code=302)
     finally:
         db.close()
 
@@ -870,7 +1005,7 @@ EMPLOYEES_CSV_COLUMNS = [
     "department", "position", "years_months_with_mk", "pay_hr_last_3_years", "loan_amount",
     "lmia", "company_phone", "company_laptop_ipad", "drive_company_vehicle", "company_gas_card",
     "skills_trade_completed", "safety_infraction_description",
-    "safety_role_ack_signed", "safety_role_ack_signed_at", "self_scheduled_at",
+    "safety_role_ack_signed", "safety_role_ack_signed_at", "self_scheduled_at", "deleted_at",
 ]
 
 
@@ -883,6 +1018,7 @@ async def admin_export_employees(request: Request):
     db: Session = SessionLocal()
     try:
         _ensure_safety_ack_columns(db)
+        _ensure_deleted_at_column(db)
         employees = db.query(Employee).order_by(Employee.name).all()
         # Get current review's employee_scheduled_at per employee
         review_sched = {}
@@ -921,6 +1057,7 @@ async def admin_export_employees(request: Request):
                 "true" if getattr(emp, "safety_role_ack_signed", None) else "false",
                 emp.safety_role_ack_signed_at.strftime("%Y-%m-%d") if getattr(emp, "safety_role_ack_signed_at", None) else "",
                 review_sched.get(str(emp.id), ""),
+                emp.deleted_at.strftime("%Y-%m-%d %H:%M:%S") if getattr(emp, "deleted_at", None) else "",
             ]
             writer.writerow(row)
         buf.seek(0)
@@ -941,7 +1078,7 @@ async def admin_import_employees(request: Request, file: UploadFile = File(...))
     if not ((current_user and current_user.role == "director") or is_admin):
         return RedirectResponse("/admin?error=Access%20restricted", status_code=302)
     if not file.filename or not file.filename.lower().endswith((".csv", ".txt")):
-        return RedirectResponse("/admin?error=Envie%20um%20arquivo%20CSV", status_code=302)
+        return RedirectResponse("/admin?error=Please%20upload%20a%20CSV%20file", status_code=302)
     content = await file.read()
     try:
         text_content = content.decode("utf-8-sig").strip()
@@ -949,16 +1086,18 @@ async def admin_import_employees(request: Request, file: UploadFile = File(...))
         try:
             text_content = content.decode("latin-1").strip()
         except Exception:
-            return RedirectResponse("/admin?error=Encoding%20inválido%20no%20CSV", status_code=302)
+            return RedirectResponse("/admin?error=Invalid%20CSV%20encoding", status_code=302)
     db: Session = SessionLocal()
     try:
         _ensure_safety_ack_columns(db)
+        _ensure_deleted_at_column(db)
         reader = csv.DictReader(io.StringIO(text_content))
         if not reader.fieldnames:
-            return RedirectResponse("/admin?error=CSV%20vazio%20ou%20sem%20cabeçalho", status_code=302)
+            return RedirectResponse("/admin?error=Empty%20CSV%20or%20missing%20header", status_code=302)
         # Normalize headers: strip and match case-insensitively to our columns
         header_map = {h.strip().lower(): h for h in reader.fieldnames}
         csv_has_safety_ack = "safety_role_ack_signed" in header_map
+        csv_has_deleted_at = "deleted_at" in header_map
         def get_val(row, col):
             for k, v in row.items():
                 if k and k.strip().lower() == col.lower():
@@ -985,7 +1124,7 @@ async def admin_import_employees(request: Request, file: UploadFile = File(...))
                 skipped += 1
                 continue
             if not name and not email:
-                errors.append(f"Linha {row_num}: nome e email são obrigatórios")
+                errors.append(f"Line {row_num}: name and email are required")
                 skipped += 1
                 continue
             if emp:
@@ -1038,18 +1177,30 @@ async def admin_import_employees(request: Request, file: UploadFile = File(...))
                                 rev.employee_scheduled_at = datetime.strptime(sched_str[:16].replace("T", " "), "%Y-%m-%d %H:%M")
                             except ValueError:
                                 pass
+                if csv_has_deleted_at:
+                    del_at = get_val(row, "deleted_at")
+                    if del_at:
+                        try:
+                            emp.deleted_at = datetime.strptime(del_at[:19], "%Y-%m-%d %H:%M:%S")
+                        except ValueError:
+                            try:
+                                emp.deleted_at = datetime.strptime(del_at[:10], "%Y-%m-%d")
+                            except ValueError:
+                                pass
+                    else:
+                        emp.deleted_at = None
         db.commit()
-        msg = f"Importado: {updated} atualizado(s)."
+        msg = f"Imported: {updated} row(s) updated."
         if skipped:
-            msg += f" {skipped} linha(s) ignorada(s) (id ausente ou não encontrado)."
+            msg += f" {skipped} row(s) skipped (missing id or not found)."
         if errors:
-            msg += " Erros: " + "; ".join(errors[:5])
+            msg += " Errors: " + "; ".join(errors[:5])
             if len(errors) > 5:
-                msg += f" (+{len(errors) - 5} mais)"
+                msg += f" (+{len(errors) - 5} more)"
         return RedirectResponse("/admin?message=" + msg.replace(" ", "%20"), status_code=302)
     except Exception as e:
         db.rollback()
-        return RedirectResponse("/admin?error=Erro%20ao%20importar:%20" + str(e).replace(" ", "%20")[:80], status_code=302)
+        return RedirectResponse("/admin?error=Import%20error:%20" + str(e).replace(" ", "%20")[:80], status_code=302)
     finally:
         db.close()
 

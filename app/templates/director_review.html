@@ -65,7 +65,7 @@
     </div>
     {% endif %}
 
-    {# Perguntas com respostas Self | Supervisor lado a lado #}
+    {# Questions with Self | Supervisor answers side by side #}
     {% set ns = namespace(current_category=None) %}
     {% for q in questions %}
       {% if q.category != ns.current_category %}

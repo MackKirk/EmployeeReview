@@ -33,6 +33,7 @@ def _ensure_employee_extended_columns():
         ("drive_company_vehicle", "VARCHAR"), ("company_gas_card", "VARCHAR"),
         ("skills_trade_completed", "VARCHAR"), ("safety_infraction_description", "TEXT"),
         ("safety_role_ack_signed", "BOOLEAN"), ("safety_role_ack_signed_at", "DATE"),
+        ("deleted_at", "TIMESTAMP NULL"),
     ]
     db = SessionLocal()
     try:

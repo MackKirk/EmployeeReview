@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Former employees{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto bg-white p-8 rounded-xl shadow space-y-6">
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <h1 class="text-2xl font-bold text-gray-800">Former employees (archived)</h1>
+    <a href="/admin" class="text-blue-600 hover:underline">← Back to admin</a>
+  </div>
+
+  <p class="text-sm text-gray-600">People who left the company: they no longer appear on the main admin list or bulk emails. Reviews and history are kept.</p>
+
+  {% if message %}
+    <div class="p-3 rounded bg-green-50 text-green-800 border border-green-200">{{ message }}</div>
+  {% endif %}
+  {% if error %}
+    <div class="p-3 rounded bg-red-50 text-red-800 border border-red-200">{{ error }}</div>
+  {% endif %}
+
+  {% if not employees %}
+    <p class="text-gray-500">No archived records.</p>
+  {% else %}
+  <div class="overflow-x-auto border border-gray-200 rounded-lg">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-100 text-gray-700">
+        <tr>
+          <th class="p-3 text-left">Name</th>
+          <th class="p-3 text-left">Email</th>
+          <th class="p-3 text-left">Archived at</th>
+          <th class="p-3 text-left">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        {% for emp in employees %}
+        <tr class="hover:bg-gray-50">
+          <td class="p-3 font-medium">{{ emp.name }}</td>
+          <td class="p-3 text-gray-600">{{ emp.email }}</td>
+          <td class="p-3 text-gray-600">{{ emp.deleted_at.strftime('%Y-%m-%d %H:%M') if emp.deleted_at else '—' }}</td>
+          <td class="p-3">
+            <a href="/admin/employee/{{ emp.id }}" class="text-blue-600 hover:underline mr-3">Profile</a>
+            <a href="/director/review/{{ emp.id }}" class="text-blue-600 hover:underline mr-3" target="_blank">View review</a>
+            <form method="post" action="/admin/employee/{{ emp.id }}/restore" class="inline" onsubmit="return confirm('Restore this employee to the main list?');">
+              <button type="submit" class="text-green-700 hover:underline font-medium">Restore</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

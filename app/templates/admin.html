@@ -11,7 +11,8 @@
       <a href="/admin/ui" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200">Edit UI Text</a>
       <a href="/admin/schedule" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200">View Schedule</a>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 flex-wrap">
+      <a href="/admin/former" class="bg-amber-100 text-amber-900 px-4 py-2 rounded hover:bg-amber-200">Former employees (archived)</a>
       <a href="/admin/employees/export" class="bg-emerald-100 text-emerald-800 px-4 py-2 rounded hover:bg-emerald-200">Export employees (CSV)</a>
       <form method="post" action="/admin/employees/import" enctype="multipart/form-data" class="flex items-center gap-2">
         <label class="bg-sky-100 text-sky-800 px-4 py-2 rounded hover:bg-sky-200 cursor-pointer">
@@ -20,6 +21,48 @@
         </label>
       </form>
     </div>
+  </div>
+
+  <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+    <h2 class="text-lg font-semibold text-gray-800 mb-3">New employee</h2>
+    <form method="post" action="/admin/create-employee" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-end">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Name <span class="text-red-600">*</span></label>
+        <input type="text" name="name" required class="w-full border border-gray-300 rounded px-3 py-2" placeholder="Full name" autocomplete="off">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+        <input type="email" name="email" class="w-full border border-gray-300 rounded px-3 py-2" placeholder="optional — uses @example.com pattern if empty">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Birth date</label>
+        <input type="date" name="birth_date" class="w-full border border-gray-300 rounded px-3 py-2">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+        <select name="role" class="w-full border border-gray-300 rounded px-3 py-2">
+          {% for r in allowed_roles %}
+          <option value="{{ r }}">{{ r }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Supervisor (name)</label>
+        <select name="supervisor_name" class="w-full border border-gray-300 rounded px-3 py-2">
+          <option value="">—</option>
+          {% for n in names %}
+          <option value="{{ n }}">{{ n }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Password (director role only)</label>
+        <input type="text" name="director_password" class="w-full border border-gray-300 rounded px-3 py-2" placeholder="default if empty" autocomplete="off">
+      </div>
+      <div class="md:col-span-2 lg:col-span-3">
+        <button type="submit" class="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700">Create employee</button>
+      </div>
+    </form>
   </div>
 
   <div class="mt-4 border border-red-300 bg-red-50 rounded-lg p-4">
@@ -182,6 +225,9 @@
             <a href="/admin/employee/{{ row.employee.id }}" class="ml-3 text-gray-700 hover:underline" title="Profile & extended info">📋</a>
             <a href="/director/review/{{ row.employee.id }}" class="ml-3 text-gray-700 hover:underline" title="View compare" target="_blank">👁️</a>
             <a href="/admin/open-review/{{ row.employee.id }}" class="ml-3 text-gray-700 hover:underline" title="Open as user" target="_blank">🔗</a>
+            <form method="post" action="/admin/employee/{{ row.employee.id }}/deactivate" class="inline ml-2" onsubmit="return confirm('Mark as departed? Data and reviews stay archived in the database.');">
+              <button type="submit" class="text-amber-700 hover:text-amber-900" title="Archive (soft delete)">🚪</button>
+            </form>
           </td>
         </tr>
         {% endfor %}

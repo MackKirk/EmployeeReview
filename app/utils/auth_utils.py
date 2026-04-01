@@ -8,9 +8,13 @@ def get_current_user(request):
     if not user_id:
         return None
     db = SessionLocal()
-    user = db.query(Employee).filter_by(id=user_id).first()
-    db.close()
-    return user
+    try:
+        user = db.query(Employee).filter_by(id=user_id).first()
+        if user and getattr(user, "deleted_at", None) is not None:
+            return None
+        return user
+    finally:
+        db.close()
 
 
 def _get_serializer() -> URLSafeTimedSerializer:

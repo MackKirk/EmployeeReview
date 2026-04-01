@@ -15,6 +15,16 @@
   <div class="p-3 rounded bg-red-50 text-red-800 border border-red-200">{{ error }}</div>
   {% endif %}
 
+  {% if is_former %}
+  <div class="p-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-900">
+    <p class="font-semibold">Archived employee (departed)</p>
+    <p class="text-sm mt-1">Hidden from the main admin list. Reviews and historical data are preserved.</p>
+    <form method="post" action="/admin/employee/{{ employee.id }}/restore" class="mt-3 inline" onsubmit="return confirm('Restore to the main list?');">
+      <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Restore to main list</button>
+    </form>
+  </div>
+  {% endif %}
+
   <form method="post" action="/admin/update-employee/{{ employee.id }}" class="space-y-6">
     <input type="hidden" name="redirect_to" value="/admin/employee/{{ employee.id }}">
 
@@ -120,10 +130,18 @@
       </div>
     </div>
 
-    <div class="flex gap-3 pt-4">
+    <div class="flex flex-wrap gap-3 pt-4 items-center">
       <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Save</button>
       <a href="/admin" class="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200">Cancel</a>
     </div>
   </form>
+
+  {% if not is_former %}
+  <div class="flex justify-end pt-2 border-t border-gray-200">
+    <form method="post" action="/admin/employee/{{ employee.id }}/deactivate" class="inline" onsubmit="return confirm('Archive as departed? Reviews are kept.');">
+      <button type="submit" class="bg-amber-100 text-amber-900 px-4 py-2 rounded hover:bg-amber-200 border border-amber-300">Mark as departed (archive)</button>
+    </form>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

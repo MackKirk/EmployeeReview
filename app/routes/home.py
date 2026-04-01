@@ -42,7 +42,10 @@ async def home(request: Request):
     # Pending reviews for supervisor
     supervisor_pending = 0
     if user.role == "supervisor" or user.is_supervisor:
-        subordinates = db.query(Employee).filter_by(supervisor_email=user.name).all()
+        subordinates = db.query(Employee).filter(
+            Employee.supervisor_email == user.name,
+            Employee.deleted_at.is_(None),
+        ).all()
         for emp in subordinates:
             r = db.query(Review).options(
                 load_only(
@@ -186,6 +189,8 @@ async def admin_send_review_link(request: Request, employee_id: str):
         emp = db.query(Employee).filter_by(id=employee_id).first()
         if not emp:
             return HTMLResponse("Employee not found", status_code=404)
+        if getattr(emp, "deleted_at", None) is not None:
+            return RedirectResponse("/admin?error=Employee%20is%20archived", status_code=302)
         if not emp.email:
             return HTMLResponse("Employee has no email", status_code=400)
 
@@ -227,7 +232,7 @@ async def admin_send_review_links(request: Request, role: str = Form(None)):
     base_url = base_url.rstrip("/")
     db: Session = SessionLocal()
     try:
-        q = db.query(Employee)
+        q = db.query(Employee).filter(Employee.deleted_at.is_(None))
         if role:
             q = q.filter(Employee.role == role)
         employees = q.all()
@@ -274,7 +279,7 @@ async def admin_send_reminders(request: Request):
     base_url = base_url.rstrip("/")
     db: Session = SessionLocal()
     try:
-        employees = db.query(Employee).all()
+        employees = db.query(Employee).filter(Employee.deleted_at.is_(None)).all()
         sent = 0
         skipped = 0
         for emp in employees:

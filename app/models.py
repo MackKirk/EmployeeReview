@@ -37,6 +37,9 @@ class Employee(Base):
     safety_role_ack_signed = Column(Boolean, default=False)
     safety_role_ack_signed_at = Column(Date, nullable=True)
 
+    # Soft delete: left the company — hidden from main admin; reviews kept
+    deleted_at = Column(DateTime, nullable=True)
+
 class Review(Base):
     __tablename__ = "reviews"
 
