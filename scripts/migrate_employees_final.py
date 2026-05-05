@@ -50,30 +50,36 @@ for emp in employees:
         emp['role'] = 'employee'
 
 # Etapa 4 – Inserir no banco
-db = SessionLocal()
-created = 0
+
 
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
-for emp in employees:
-    exists = db.query(Employee).filter(Employee.name == emp['name']).first()
-    if exists:
-        continue
 
-    new_emp = Employee(
-        id=emp['id'],
-        name=emp['name'],
-        email=emp['email'] or f"fake_{uuid.uuid4()}@example.com",
-        birth_date=date(2000, 1, 1),
-        supervisor_email=emp['supervisor_email'],
-        role=emp['role'],
-        password=hash_password("directorpass") if emp['role'] == 'director' else None
-    )
-    db.add(new_emp)
-    created += 1
+db = SessionLocal()
+created = 0
+try:
+    for emp in employees:
+        exists = db.query(Employee).filter(Employee.name == emp['name']).first()
+        if exists:
+            continue
 
-db.commit()
-db.close()
+        new_emp = Employee(
+            id=emp['id'],
+            name=emp['name'],
+            email=emp['email'] or f"fake_{uuid.uuid4()}@example.com",
+            birth_date=date(2000, 1, 1),
+            supervisor_email=emp['supervisor_email'],
+            role=emp['role'],
+            password=hash_password("directorpass") if emp['role'] == 'director' else None
+        )
+        db.add(new_emp)
+        created += 1
 
-print(f"✅ Importação finalizada. Funcionários criados: {created}")
+    db.commit()
+    print(f"✅ Importação finalizada. Funcionários criados: {created}")
+except Exception:
+    db.rollback()
+    raise
+finally:
+    db.close()

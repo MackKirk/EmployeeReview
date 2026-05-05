@@ -1,20 +1,41 @@
+from typing import Optional
+
+from sqlalchemy.orm import Session
+
 from app.db import SessionLocal
 from app.models import Employee
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 import os
 
-def get_current_user(request):
+
+def get_current_user(request, db: Optional[Session] = None):
+    """
+    Returns the logged-in Employee or None.
+
+    Pass the request-scoped session from Depends(get_db) as db so this helper
+    does not open a second connection. If db is omitted, a short-lived session
+    is used (backward compatible until all routes are migrated).
+    """
     user_id = request.session.get("user_id")
     if not user_id:
         return None
-    db = SessionLocal()
-    try:
+
+    if db is not None:
         user = db.query(Employee).filter_by(id=user_id).first()
         if user and getattr(user, "deleted_at", None) is not None:
             return None
         return user
+
+    own = SessionLocal()
+    try:
+        user = own.query(Employee).filter_by(id=user_id).first()
+        if user and getattr(user, "deleted_at", None) is not None:
+            return None
+        if user is not None:
+            own.expunge(user)
+        return user
     finally:
-        db.close()
+        own.close()
 
 
 def _get_serializer() -> URLSafeTimedSerializer:
@@ -38,7 +59,7 @@ def verify_magic_login_token(token: str, max_age_seconds: int = None):
     if max_age_seconds is None:
         # Default: 7 days
         max_age_seconds = int(os.getenv("MAGIC_LINK_MAX_AGE_SECONDS", "604800"))
-    
+
     # First, try with the normal max_age
     try:
         data = s.loads(token, max_age=max_age_seconds)
