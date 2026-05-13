@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Request, Form
+# Sessions are request-scoped via get_db(); never call SessionLocal() inside handlers.
+from fastapi import APIRouter, Request, Form, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from app.db import SessionLocal
+
+from app.db import get_db
 from app.models import Employee, Review
 from app.utils.questions import get_questions_for_role
 from app.utils.ui_overrides import get_rating_panel_html
@@ -16,9 +18,12 @@ templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("/supervisor/{supervisor_id}", response_class=HTMLResponse)
-async def supervisor_dashboard(request: Request, supervisor_id: str):
-    current_user = get_current_user(request)
-    db: Session = SessionLocal()
+async def supervisor_dashboard(
+    request: Request,
+    supervisor_id: str,
+    db: Session = Depends(get_db),
+):
+    current_user = get_current_user(request, db)
     supervisor = db.query(Employee).filter_by(id=supervisor_id).first()
     is_admin = bool(request.session.get("is_admin"))
     if (
@@ -31,11 +36,9 @@ async def supervisor_dashboard(request: Request, supervisor_id: str):
             or current_user.is_supervisor
         )
     ):
-        db.close()
         return HTMLResponse("Access denied", status_code=403)
     # If the target user is missing entirely, block; otherwise allow directors/admins even if the flag isn't set.
     if not supervisor:
-        db.close()
         return HTMLResponse(
             "Supervisor not found or access denied", status_code=403
         )
@@ -65,7 +68,6 @@ async def supervisor_dashboard(request: Request, supervisor_id: str):
             "employee_done": employee_done,
             "supervisor_done": supervisor_done,
         })
-    db.close()
     return templates.TemplateResponse(request, "supervisor_dashboard.html", {
         "supervisor": supervisor,
         "subordinates": data,
@@ -73,12 +75,14 @@ async def supervisor_dashboard(request: Request, supervisor_id: str):
 
 
 @router.get("/supervisor/review/{employee_id}", response_class=HTMLResponse)
-async def supervisor_review(request: Request, employee_id: str):
-    current_user = get_current_user(request)
-    db: Session = SessionLocal()
+async def supervisor_review(
+    request: Request,
+    employee_id: str,
+    db: Session = Depends(get_db),
+):
+    current_user = get_current_user(request, db)
     employee = db.query(Employee).filter_by(id=employee_id).first()
     if not employee:
-        db.close()
         return HTMLResponse("Employee not found", status_code=404)
     is_admin = bool(request.session.get("is_admin"))
     allowed = False
@@ -91,7 +95,6 @@ async def supervisor_review(request: Request, employee_id: str):
             else:
                 allowed = current_user.name == employee.supervisor_email
     if not allowed:
-        db.close()
         return HTMLResponse("Access denied", status_code=403)
 
     review = db.query(Review).options(
@@ -110,7 +113,6 @@ async def supervisor_review(request: Request, employee_id: str):
     existing_map = {a["question"]: a.get("value") for a in existing} if existing else {}
     comment_map = {a["question"]: a.get("comment") for a in existing} if existing else {}
     readonly = bool(existing)
-    db.close()
     rating_panel_html = get_rating_panel_html()
     # Use the employee's role so supervisor reviews the same questionnaire the employee answered
     selected_questions = get_questions_for_role(employee.role)
@@ -125,12 +127,14 @@ async def supervisor_review(request: Request, employee_id: str):
 
 
 @router.post("/supervisor/review/{employee_id}/submit")
-async def submit_supervisor_review(request: Request, employee_id: str):
-    current_user = get_current_user(request)
-    db: Session = SessionLocal()
+async def submit_supervisor_review(
+    request: Request,
+    employee_id: str,
+    db: Session = Depends(get_db),
+):
+    current_user = get_current_user(request, db)
     employee = db.query(Employee).filter_by(id=employee_id).first()
     if not employee:
-        db.close()
         return HTMLResponse("Employee not found", status_code=404)
     is_admin = bool(request.session.get("is_admin"))
     allowed = False
@@ -143,7 +147,6 @@ async def submit_supervisor_review(request: Request, employee_id: str):
             else:
                 allowed = current_user.name == employee.supervisor_email
     if not allowed:
-        db.close()
         return HTMLResponse("Access denied", status_code=403)
 
     form = await request.form()
@@ -187,8 +190,11 @@ async def submit_supervisor_review(request: Request, employee_id: str):
         )
         db.add(review)
 
-    db.commit()
-    db.close()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
     return templates.TemplateResponse(
         request,

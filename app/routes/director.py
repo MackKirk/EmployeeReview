@@ -1,10 +1,11 @@
+# Sessions are request-scoped via get_db(); never call SessionLocal() inside handlers.
 import csv
 import io
-from fastapi import APIRouter, Request, Form, UploadFile, File
+from fastapi import APIRouter, Request, Form, UploadFile, File, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from app.db import SessionLocal
+from app.db import get_db
 from app.models import Employee, Review, EmailEvent
 from app.utils.auth_utils import get_current_user
 from app.utils.questions import questions, get_questions_for_role
@@ -44,10 +45,9 @@ def _ensure_safety_ack_columns(db: Session) -> None:
 
 
 @router.get("/director/review/{employee_id}", response_class=HTMLResponse)
-async def director_view_review(request: Request, employee_id: str):
-    current_user = get_current_user(request)
+async def director_view_review(request: Request, employee_id: str, db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
-    db: Session = SessionLocal()
     employee = db.query(Employee).filter_by(id=employee_id).first()
     review = db.query(Review).options(
         load_only(
@@ -63,14 +63,11 @@ async def director_view_review(request: Request, employee_id: str):
         )
     ).filter_by(employee_id=employee_id).first()
     if not ((current_user and current_user.role == "director") or is_admin):
-        db.close()
         return HTMLResponse("Access restricted", status_code=403)
     if not employee or not review:
-        db.close()
         return HTMLResponse("Employee or review not found.", status_code=404)
 
     if not review.employee_answers or not review.supervisor_answers:
-        db.close()
         return HTMLResponse("Incomplete review.", status_code=400)
     existing = review.director_comments or []
     comment_map = {c["question"]: c.get("comment") for c in existing}
@@ -197,9 +194,8 @@ async def director_view_review(request: Request, employee_id: str):
     )
 
 @router.post("/director/review/{employee_id}/submit")
-async def save_director_comments(request: Request, employee_id: str):
-    current_user = get_current_user(request)
-    db: Session = SessionLocal()
+async def save_director_comments(request: Request, employee_id: str, db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
     review = db.query(Review).options(
         load_only(
             Review.id,
@@ -216,10 +212,8 @@ async def save_director_comments(request: Request, employee_id: str):
     emp = db.query(Employee).filter_by(id=employee_id).first()
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
-        db.close()
         return HTMLResponse("Access restricted", status_code=403)
     if not review or not emp:
-        db.close()
         return HTMLResponse("Review not found.", status_code=404)
 
     form = await request.form()
@@ -241,8 +235,6 @@ async def save_director_comments(request: Request, employee_id: str):
         db.commit()
     except Exception:
         db.rollback()
-    db.close()
-
     return templates.TemplateResponse(
         request,
         "success.html",
@@ -255,11 +247,9 @@ async def save_director_comments(request: Request, employee_id: str):
 
 
 @router.get("/director/dashboard", response_class=HTMLResponse)
-async def director_dashboard(request: Request):
-    current_user = get_current_user(request)
-    db: Session = SessionLocal()
+async def director_dashboard(request: Request, db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
     if not current_user or current_user.role != "director":
-        db.close()
         return HTMLResponse("Access restricted", status_code=403)
 
     from sqlalchemy.orm import joinedload
@@ -277,85 +267,79 @@ async def director_dashboard(request: Request):
         ),
         joinedload(Review.employee),
     ).all()
-    db.close()
-
     return templates.TemplateResponse(request, "director_dashboard.html", {
         "reviews": reviews
     })
 
 
 @router.get("/admin/schedule", response_class=HTMLResponse)
-async def admin_schedule(request: Request):
-    current_user = get_current_user(request)
+async def admin_schedule(request: Request, db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
 
-    db: Session = SessionLocal()
+    _ensure_deleted_at_column(db)
+    # Ensure column exists (auto-migrate if needed)
+    col_exists = False
     try:
-        _ensure_deleted_at_column(db)
-        # Ensure column exists (auto-migrate if needed)
+        exists_sql = text("SELECT 1 FROM information_schema.columns WHERE table_name='reviews' AND column_name='employee_scheduled_at'")
+        col_exists = db.execute(exists_sql).first() is not None
+    except Exception:
         col_exists = False
+    if not col_exists:
         try:
-            exists_sql = text("SELECT 1 FROM information_schema.columns WHERE table_name='reviews' AND column_name='employee_scheduled_at'")
-            col_exists = db.execute(exists_sql).first() is not None
+            db.execute(text("ALTER TABLE reviews ADD COLUMN IF NOT EXISTS employee_scheduled_at TIMESTAMP NULL"))
+            db.commit()
+            col_exists = True
         except Exception:
-            col_exists = False
-        if not col_exists:
-            try:
-                db.execute(text("ALTER TABLE reviews ADD COLUMN IF NOT EXISTS employee_scheduled_at TIMESTAMP NULL"))
-                db.commit()
-                col_exists = True
-            except Exception:
-                db.rollback()
-        events = []
-        if col_exists:
-            rows = db.execute(text("""
-                SELECT r.employee_scheduled_at, e.name
-                FROM reviews r
-                JOIN employees e ON e.id = r.employee_id
-                WHERE r.employee_scheduled_at IS NOT NULL
-                  AND e.deleted_at IS NULL
-                ORDER BY r.employee_scheduled_at ASC
-            """)).all()
-            for dt, name in rows:
-                if dt:
-                    events.append({"employee": name, "iso": dt.isoformat()})
-
-        # Employees ready to schedule: both employee and supervisor reviews done
-        ready_rows = db.execute(text("""
-            SELECT e.id, e.name, r.employee_scheduled_at
-            FROM employees e
-            JOIN reviews r ON r.employee_id = e.id
-            WHERE r.employee_answers IS NOT NULL AND r.supervisor_answers IS NOT NULL
+            db.rollback()
+    events = []
+    if col_exists:
+        rows = db.execute(text("""
+            SELECT r.employee_scheduled_at, e.name
+            FROM reviews r
+            JOIN employees e ON e.id = r.employee_id
+            WHERE r.employee_scheduled_at IS NOT NULL
               AND e.deleted_at IS NULL
-            ORDER BY e.name
+            ORDER BY r.employee_scheduled_at ASC
         """)).all()
-        ready_to_schedule = []
-        for row in ready_rows:
-            emp_id, name, sched = row
-            ready_to_schedule.append({
-                "employee_id": str(emp_id),
-                "name": name,
-                "scheduled_at": sched.isoformat() if sched else None,
-                "scheduled_display": sched.strftime("%Y-%m-%d %H:%M") if sched else None,
-                "scheduled_time": sched.strftime("%H:%M") if sched else None,
-            })
+        for dt, name in rows:
+            if dt:
+                events.append({"employee": name, "iso": dt.isoformat()})
 
-        import json as _json
-        return templates.TemplateResponse(request, "admin_schedule.html", {
-            "events_json": _json.dumps(events),
-            "ready_to_schedule": ready_to_schedule,
-            "message": request.query_params.get("message"),
-            "error": request.query_params.get("error"),
+    # Employees ready to schedule: both employee and supervisor reviews done
+    ready_rows = db.execute(text("""
+        SELECT e.id, e.name, r.employee_scheduled_at
+        FROM employees e
+        JOIN reviews r ON r.employee_id = e.id
+        WHERE r.employee_answers IS NOT NULL AND r.supervisor_answers IS NOT NULL
+          AND e.deleted_at IS NULL
+        ORDER BY e.name
+    """)).all()
+    ready_to_schedule = []
+    for row in ready_rows:
+        emp_id, name, sched = row
+        ready_to_schedule.append({
+            "employee_id": str(emp_id),
+            "name": name,
+            "scheduled_at": sched.isoformat() if sched else None,
+            "scheduled_display": sched.strftime("%Y-%m-%d %H:%M") if sched else None,
+            "scheduled_time": sched.strftime("%H:%M") if sched else None,
         })
-    finally:
-        db.close()
+
+    import json as _json
+    return templates.TemplateResponse(request, "admin_schedule.html", {
+        "events_json": _json.dumps(events),
+        "ready_to_schedule": ready_to_schedule,
+        "message": request.query_params.get("message"),
+        "error": request.query_params.get("error"),
+    })
 
 
 @router.post("/admin/schedule-employee/{employee_id}")
-async def admin_schedule_employee(request: Request, employee_id: str):
-    current_user = get_current_user(request)
+async def admin_schedule_employee(request: Request, employee_id: str, db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
@@ -386,145 +370,136 @@ async def admin_schedule_employee(request: Request, employee_id: str):
         parsed = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
     except Exception:
         return RedirectResponse("/admin/schedule?error=Invalid+date", status_code=302)
-
-    db: Session = SessionLocal()
     try:
-        try:
-            exists_sql = text("SELECT 1 FROM information_schema.columns WHERE table_name='reviews' AND column_name='employee_scheduled_at'")
-            col_exists = db.execute(exists_sql).first() is not None
-        except Exception:
-            col_exists = False
-        if not col_exists:
-            db.execute(text("ALTER TABLE reviews ADD COLUMN IF NOT EXISTS employee_scheduled_at TIMESTAMP NULL"))
-            db.commit()
-
-        dup = db.execute(
-            text("SELECT 1 FROM reviews WHERE employee_scheduled_at = :dt AND employee_id <> CAST(:eid AS uuid) LIMIT 1"),
-            {"dt": parsed, "eid": employee_id},
-        ).first()
-        if dup:
-            return RedirectResponse("/admin/schedule?error=Time+slot+already+taken", status_code=302)
-
-        review = db.query(Review).options(load_only(Review.id, Review.employee_id)).filter_by(employee_id=employee_id).first()
-        if not review:
-            review = Review(employee_id=employee_id)
-            db.add(review)
-            db.flush()
-        db.execute(
-            text("UPDATE reviews SET employee_scheduled_at = :dt WHERE id = CAST(:id AS uuid)"),
-            {"dt": parsed, "id": str(review.id)},
-        )
+        exists_sql = text("SELECT 1 FROM information_schema.columns WHERE table_name='reviews' AND column_name='employee_scheduled_at'")
+        col_exists = db.execute(exists_sql).first() is not None
+    except Exception:
+        col_exists = False
+    if not col_exists:
+        db.execute(text("ALTER TABLE reviews ADD COLUMN IF NOT EXISTS employee_scheduled_at TIMESTAMP NULL"))
         db.commit()
-        return RedirectResponse("/admin/schedule?message=Meeting+scheduled", status_code=302)
-    finally:
-        db.close()
+
+    dup = db.execute(
+        text("SELECT 1 FROM reviews WHERE employee_scheduled_at = :dt AND employee_id <> CAST(:eid AS uuid) LIMIT 1"),
+        {"dt": parsed, "eid": employee_id},
+    ).first()
+    if dup:
+        return RedirectResponse("/admin/schedule?error=Time+slot+already+taken", status_code=302)
+
+    review = db.query(Review).options(load_only(Review.id, Review.employee_id)).filter_by(employee_id=employee_id).first()
+    if not review:
+        review = Review(employee_id=employee_id)
+        db.add(review)
+        db.flush()
+    db.execute(
+        text("UPDATE reviews SET employee_scheduled_at = :dt WHERE id = CAST(:id AS uuid)"),
+        {"dt": parsed, "id": str(review.id)},
+    )
+    db.commit()
+    return RedirectResponse("/admin/schedule?message=Meeting+scheduled", status_code=302)
 
 
 @router.get("/admin", response_class=HTMLResponse)
-async def admin_page(request: Request):
-    current_user = get_current_user(request)
+async def admin_page(request: Request, db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
 
-    db: Session = SessionLocal()
+    _ensure_safety_ack_columns(db)
+    _ensure_deleted_at_column(db)
+    from sqlalchemy.orm import joinedload
+    employees = db.query(Employee).filter(Employee.deleted_at.is_(None)).order_by(Employee.name).all()
+    # Check if schedule column exists to avoid 500 before migration runs
+    col_exists = False
     try:
-        _ensure_safety_ack_columns(db)
-        _ensure_deleted_at_column(db)
-        from sqlalchemy.orm import joinedload
-        employees = db.query(Employee).filter(Employee.deleted_at.is_(None)).order_by(Employee.name).all()
-        # Check if schedule column exists to avoid 500 before migration runs
+        exists_sql = text("SELECT 1 FROM information_schema.columns WHERE table_name='reviews' AND column_name='employee_scheduled_at'")
+        col_exists = db.execute(exists_sql).first() is not None
+    except Exception:
         col_exists = False
+    # Auto-migrate if missing
+    if not col_exists:
         try:
-            exists_sql = text("SELECT 1 FROM information_schema.columns WHERE table_name='reviews' AND column_name='employee_scheduled_at'")
-            col_exists = db.execute(exists_sql).first() is not None
+            db.execute(text("ALTER TABLE reviews ADD COLUMN IF NOT EXISTS employee_scheduled_at TIMESTAMP NULL"))
+            db.commit()
+            col_exists = True
         except Exception:
-            col_exists = False
-        # Auto-migrate if missing
-        if not col_exists:
+            db.rollback()
+    rows = []
+    for emp in employees:
+        r = db.query(Review).options(
+            load_only(
+                Review.id,
+                Review.employee_id,
+                Review.supervisor_id,
+                Review.employee_answers,
+                Review.supervisor_answers,
+                Review.director_comments,
+                Review.status,
+                Review.created_at,
+                Review.updated_at,
+            ),
+            joinedload(Review.employee),
+        ).filter_by(employee_id=emp.id).first()
+        employee_done = bool(r and r.employee_answers)
+        supervisor_done = bool(r and r.supervisor_answers)
+        director_done = bool(r and r.director_comments)
+        # Email tracking
+        has_sent = db.query(EmailEvent).filter_by(employee_id=emp.id, event_type="sent").first() is not None
+        has_clicked = db.query(EmailEvent).filter_by(employee_id=emp.id, event_type="clicked").first() is not None
+        sched_display = None
+        sched_value = ""
+        if col_exists and r:
             try:
-                db.execute(text("ALTER TABLE reviews ADD COLUMN IF NOT EXISTS employee_scheduled_at TIMESTAMP NULL"))
-                db.commit()
-                col_exists = True
+                # Load schedule lazily via direct SQL to avoid selecting missing column elsewhere
+                srow = db.execute(
+                    text("SELECT employee_scheduled_at FROM reviews WHERE id = CAST(:id AS uuid)"),
+                    {"id": str(r.id)},
+                ).first()
+                if srow and srow[0]:
+                    sched_display = srow[0].strftime("%Y-%m-%d %H:%M")
+                    sched_value = srow[0].strftime("%Y-%m-%dT%H:%M")
             except Exception:
-                db.rollback()
-        rows = []
-        for emp in employees:
-            r = db.query(Review).options(
-                load_only(
-                    Review.id,
-                    Review.employee_id,
-                    Review.supervisor_id,
-                    Review.employee_answers,
-                    Review.supervisor_answers,
-                    Review.director_comments,
-                    Review.status,
-                    Review.created_at,
-                    Review.updated_at,
-                ),
-                joinedload(Review.employee),
-            ).filter_by(employee_id=emp.id).first()
-            employee_done = bool(r and r.employee_answers)
-            supervisor_done = bool(r and r.supervisor_answers)
-            director_done = bool(r and r.director_comments)
-            # Email tracking
-            has_sent = db.query(EmailEvent).filter_by(employee_id=emp.id, event_type="sent").first() is not None
-            has_clicked = db.query(EmailEvent).filter_by(employee_id=emp.id, event_type="clicked").first() is not None
-            sched_display = None
-            sched_value = ""
-            if col_exists and r:
-                try:
-                    # Load schedule lazily via direct SQL to avoid selecting missing column elsewhere
-                    srow = db.execute(
-                        text("SELECT employee_scheduled_at FROM reviews WHERE id = CAST(:id AS uuid)"),
-                        {"id": str(r.id)},
-                    ).first()
-                    if srow and srow[0]:
-                        sched_display = srow[0].strftime("%Y-%m-%d %H:%M")
-                        sched_value = srow[0].strftime("%Y-%m-%dT%H:%M")
-                except Exception:
-                    pass
-            rows.append({
-                "employee": emp,
-                "employee_done": employee_done,
-                "supervisor_done": supervisor_done,
-                "director_done": director_done,
-                "has_sent": has_sent,
-                "has_clicked": has_clicked,
-                "self_scheduled_at_display": sched_display,
-                "self_scheduled_at_value": sched_value,
-            })
-        all_names = [e.name for e in employees]
-        
-        # Calculate pending counts
-        employee_pending = 0
-        supervisor_pending = 0
-        director_pending = 0
-        
-        for emp in employees:
-            r = db.query(Review).options(
-                load_only(
-                    Review.employee_id,
-                    Review.employee_answers,
-                    Review.supervisor_answers,
-                    Review.director_comments,
-                )
-            ).filter_by(employee_id=emp.id).first()
-            
-            # Employee pending: no employee_answers
-            if not r or not r.employee_answers:
-                employee_pending += 1
-            
-            # Supervisor pending: has employee_answers but no supervisor_answers
-            # Only count if employee has a supervisor assigned
-            if r and r.employee_answers and not r.supervisor_answers and emp.supervisor_email:
-                supervisor_pending += 1
-            
-            # Director pending: has employee_answers and supervisor_answers but no director_comments
-            if r and r.employee_answers and r.supervisor_answers and not r.director_comments:
-                director_pending += 1
-    finally:
-        db.close()
+                pass
+        rows.append({
+            "employee": emp,
+            "employee_done": employee_done,
+            "supervisor_done": supervisor_done,
+            "director_done": director_done,
+            "has_sent": has_sent,
+            "has_clicked": has_clicked,
+            "self_scheduled_at_display": sched_display,
+            "self_scheduled_at_value": sched_value,
+        })
+    all_names = [e.name for e in employees]
+
+    # Calculate pending counts
+    employee_pending = 0
+    supervisor_pending = 0
+    director_pending = 0
+
+    for emp in employees:
+        r = db.query(Review).options(
+            load_only(
+                Review.employee_id,
+                Review.employee_answers,
+                Review.supervisor_answers,
+                Review.director_comments,
+            )
+        ).filter_by(employee_id=emp.id).first()
+
+        # Employee pending: no employee_answers
+        if not r or not r.employee_answers:
+            employee_pending += 1
+
+        # Supervisor pending: has employee_answers but no supervisor_answers
+        # Only count if employee has a supervisor assigned
+        if r and r.employee_answers and not r.supervisor_answers and emp.supervisor_email:
+            supervisor_pending += 1
+
+        # Director pending: has employee_answers and supervisor_answers but no director_comments
+        if r and r.employee_answers and r.supervisor_answers and not r.director_comments:
+            director_pending += 1
 
     return templates.TemplateResponse(request, "admin.html", {
         "rows": rows,
@@ -539,60 +514,56 @@ async def admin_page(request: Request):
 
 
 @router.get("/admin/employee/{employee_id}", response_class=HTMLResponse)
-async def admin_employee_profile(request: Request, employee_id: str):
-    current_user = get_current_user(request)
+async def admin_employee_profile(request: Request, employee_id: str, db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
-    db: Session = SessionLocal()
-    try:
-        _ensure_deleted_at_column(db)
-        emp = db.query(Employee).filter_by(id=employee_id).first()
-        if not emp:
-            db.close()
-            return HTMLResponse("Employee not found", status_code=404)
-        # Ensure extended profile columns exist (auto-migrate)
-        for col, typ in [
-            ("department", "VARCHAR"), ("position", "VARCHAR"), ("years_months_with_mk", "VARCHAR"),
-            ("pay_hr_last_3_years", "TEXT"), ("loan_amount", "VARCHAR"), ("lmia", "VARCHAR"),
-            ("company_phone", "VARCHAR"), ("company_laptop_ipad", "VARCHAR"),
-            ("drive_company_vehicle", "VARCHAR"), ("company_gas_card", "VARCHAR"),
-            ("skills_trade_completed", "VARCHAR"), ("safety_infraction_description", "TEXT"),
-            ("safety_role_ack_signed", "BOOLEAN"), ("safety_role_ack_signed_at", "DATE"),
-        ]:
-            try:
-                ex = db.execute(text(
-                    "SELECT 1 FROM information_schema.columns WHERE table_name='employees' AND column_name=:c"
-                ), {"c": col}).first()
-                if not ex:
-                    db.execute(text(f"ALTER TABLE employees ADD COLUMN IF NOT EXISTS {col} {typ} NULL"))
-                    db.commit()
-            except Exception:
-                db.rollback()
-        names = [e.name for e in db.query(Employee).filter(Employee.deleted_at.is_(None)).order_by(Employee.name).all()]
-        sched_value = ""
+
+    _ensure_deleted_at_column(db)
+    emp = db.query(Employee).filter_by(id=employee_id).first()
+    if not emp:
+        return HTMLResponse("Employee not found", status_code=404)
+    # Ensure extended profile columns exist (auto-migrate)
+    for col, typ in [
+        ("department", "VARCHAR"), ("position", "VARCHAR"), ("years_months_with_mk", "VARCHAR"),
+        ("pay_hr_last_3_years", "TEXT"), ("loan_amount", "VARCHAR"), ("lmia", "VARCHAR"),
+        ("company_phone", "VARCHAR"), ("company_laptop_ipad", "VARCHAR"),
+        ("drive_company_vehicle", "VARCHAR"), ("company_gas_card", "VARCHAR"),
+        ("skills_trade_completed", "VARCHAR"), ("safety_infraction_description", "TEXT"),
+        ("safety_role_ack_signed", "BOOLEAN"), ("safety_role_ack_signed_at", "DATE"),
+    ]:
         try:
-            r = db.query(Review).options(load_only(Review.id)).filter_by(employee_id=emp.id).first()
-            if r:
-                srow = db.execute(
-                    text("SELECT employee_scheduled_at FROM reviews WHERE id = CAST(:id AS uuid)"),
-                    {"id": str(r.id)},
-                ).first()
-                if srow and srow[0]:
-                    sched_value = srow[0].strftime("%Y-%m-%dT%H:%M")
+            ex = db.execute(text(
+                "SELECT 1 FROM information_schema.columns WHERE table_name='employees' AND column_name=:c"
+            ), {"c": col}).first()
+            if not ex:
+                db.execute(text(f"ALTER TABLE employees ADD COLUMN IF NOT EXISTS {col} {typ} NULL"))
+                db.commit()
         except Exception:
-            pass
-        return templates.TemplateResponse(request, "admin_employee.html", {
-            "employee": emp,
-            "names": names,
-            "allowed_roles": ["employee", "supervisor", "administration", "director"],
-            "self_scheduled_at_value": sched_value,
-            "message": request.query_params.get("message"),
-            "error": request.query_params.get("error"),
-            "is_former": getattr(emp, "deleted_at", None) is not None,
-        })
-    finally:
-        db.close()
+            db.rollback()
+    names = [e.name for e in db.query(Employee).filter(Employee.deleted_at.is_(None)).order_by(Employee.name).all()]
+    sched_value = ""
+    try:
+        r = db.query(Review).options(load_only(Review.id)).filter_by(employee_id=emp.id).first()
+        if r:
+            srow = db.execute(
+                text("SELECT employee_scheduled_at FROM reviews WHERE id = CAST(:id AS uuid)"),
+                {"id": str(r.id)},
+            ).first()
+            if srow and srow[0]:
+                sched_value = srow[0].strftime("%Y-%m-%dT%H:%M")
+    except Exception:
+        pass
+    return templates.TemplateResponse(request, "admin_employee.html", {
+        "employee": emp,
+        "names": names,
+        "allowed_roles": ["employee", "supervisor", "administration", "director"],
+        "self_scheduled_at_value": sched_value,
+        "message": request.query_params.get("message"),
+        "error": request.query_params.get("error"),
+        "is_former": getattr(emp, "deleted_at", None) is not None,
+    })
 
 
 @router.post("/admin/update-employee/{employee_id}")
@@ -616,8 +587,9 @@ async def admin_update_employee(
     company_gas_card: str = Form(None),
     skills_trade_completed: str = Form(None),
     safety_infraction_description: str = Form(None),
+    db: Session = Depends(get_db),
 ):
-    current_user = get_current_user(request)
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
@@ -626,130 +598,123 @@ async def admin_update_employee(
     role_val = (role or "").strip().lower()
     if role_val and role_val not in allowed:
         return HTMLResponse("Invalid role", status_code=400)
+    emp = db.query(Employee).filter_by(id=employee_id).first()
+    if not emp:
+        return HTMLResponse("Employee not found", status_code=404)
 
-    db: Session = SessionLocal()
-    try:
-        emp = db.query(Employee).filter_by(id=employee_id).first()
-        if not emp:
-            return HTMLResponse("Employee not found", status_code=404)
-
-        changed = False
-        if role_val and emp.role != role_val:
-            emp.role = role_val
-            # If set to supervisor, ensure is_supervisor; otherwise clear it
-            if role_val == "supervisor":
-                if not emp.is_supervisor:
-                    emp.is_supervisor = True
-            else:
-                if emp.is_supervisor:
-                    emp.is_supervisor = False
-            changed = True
-
-        sup_name_val = (supervisor_name or "").strip()
-        if emp.supervisor_email != sup_name_val:
-            # Allow clearing supervisor by selecting None
-            emp.supervisor_email = sup_name_val or None
-            if sup_name_val:
-                # Ensure the named supervisor is flagged as supervisor
-                sup_emp = db.query(Employee).filter(Employee.name == sup_name_val).first()
-                if sup_emp and not sup_emp.is_supervisor:
-                    sup_emp.is_supervisor = True
-            changed = True
-
-        # Handle scheduling the employee self review (only if column exists)
-        schedule_val = (self_scheduled_at or "").strip()
-        try:
-            exists_sql = text("SELECT 1 FROM information_schema.columns WHERE table_name='reviews' AND column_name='employee_scheduled_at'")
-            schedule_col_exists = db.execute(exists_sql).first() is not None
-        except Exception:
-            schedule_col_exists = False
-        if not schedule_col_exists:
-            # Attempt to auto-migrate on first update
-            try:
-                db.execute(text("ALTER TABLE reviews ADD COLUMN IF NOT EXISTS employee_scheduled_at TIMESTAMP NULL"))
-                db.commit()
-                schedule_col_exists = True
-            except Exception:
-                db.rollback()
-        if schedule_col_exists:
-            if schedule_val:
-                try:
-                    # Expecting 'YYYY-MM-DDTHH:MM' from input[type=datetime-local]
-                    parsed = datetime.strptime(schedule_val, "%Y-%m-%dT%H:%M")
-                except Exception:
-                    from fastapi.responses import RedirectResponse
-                    return RedirectResponse("/admin?error=Invalid%20date%20format", status_code=302)
-                # Find or create review
-                review = db.query(Review).options(
-                    load_only(Review.id, Review.employee_id)
-                ).filter_by(employee_id=emp.id).first()
-                if not review:
-                    review = Review(employee_id=emp.id)
-                    db.add(review)
-                    db.flush()
-                # Duplicate check: another review with same datetime
-                dup = db.execute(
-                    text("SELECT 1 FROM reviews WHERE employee_scheduled_at = :dt AND employee_id <> CAST(:eid AS uuid) LIMIT 1"),
-                    {"dt": parsed, "eid": str(emp.id)},
-                ).first()
-                if dup:
-                    from fastapi.responses import RedirectResponse
-                    return RedirectResponse("/admin?error=Time%20slot%20already%20taken", status_code=302)
-                # Update via direct SQL to avoid ORM selecting missing columns
-                if review and getattr(review, "id", None):
-                    db.execute(
-                        text("UPDATE reviews SET employee_scheduled_at = :dt WHERE id = CAST(:id AS uuid)"),
-                        {"dt": parsed, "id": str(review.id)},
-                    )
-                changed = True
-            else:
-                # Allow clearing the schedule
-                review = db.query(Review).options(
-                    load_only(Review.id, Review.employee_id)
-                ).filter_by(employee_id=emp.id).first()
-                if review and getattr(review, "id", None):
-                    db.execute(
-                        text("UPDATE reviews SET employee_scheduled_at = NULL WHERE id = CAST(:id AS uuid)"),
-                        {"id": str(review.id)},
-                    )
-                    changed = True
-
-        # Extended profile fields
-        extended = {
-            "department": department,
-            "position": position,
-            "years_months_with_mk": years_months_with_mk,
-            "pay_hr_last_3_years": pay_hr_last_3_years,
-            "loan_amount": loan_amount,
-            "lmia": lmia,
-            "company_phone": company_phone,
-            "company_laptop_ipad": company_laptop_ipad,
-            "drive_company_vehicle": drive_company_vehicle,
-            "company_gas_card": company_gas_card,
-            "skills_trade_completed": skills_trade_completed,
-            "safety_infraction_description": safety_infraction_description,
-        }
-        for key, val in extended.items():
-            if hasattr(emp, key):
-                v = (val or "").strip() or None
-                if getattr(emp, key) != v:
-                    setattr(emp, key, v)
-                    changed = True
-
-        if changed:
-            db.commit()
-
-        from fastapi.responses import RedirectResponse
-        target = (redirect_to or "").strip() or "/admin"
-        if "?" in target:
-            target += "&message=Saved"
+    changed = False
+    if role_val and emp.role != role_val:
+        emp.role = role_val
+        # If set to supervisor, ensure is_supervisor; otherwise clear it
+        if role_val == "supervisor":
+            if not emp.is_supervisor:
+                emp.is_supervisor = True
         else:
-            target += "?message=Saved"
-        return RedirectResponse(target, status_code=302)
-    finally:
-        db.close()
+            if emp.is_supervisor:
+                emp.is_supervisor = False
+        changed = True
 
+    sup_name_val = (supervisor_name or "").strip()
+    if emp.supervisor_email != sup_name_val:
+        # Allow clearing supervisor by selecting None
+        emp.supervisor_email = sup_name_val or None
+        if sup_name_val:
+            # Ensure the named supervisor is flagged as supervisor
+            sup_emp = db.query(Employee).filter(Employee.name == sup_name_val).first()
+            if sup_emp and not sup_emp.is_supervisor:
+                sup_emp.is_supervisor = True
+        changed = True
 
+    # Handle scheduling the employee self review (only if column exists)
+    schedule_val = (self_scheduled_at or "").strip()
+    try:
+        exists_sql = text("SELECT 1 FROM information_schema.columns WHERE table_name='reviews' AND column_name='employee_scheduled_at'")
+        schedule_col_exists = db.execute(exists_sql).first() is not None
+    except Exception:
+        schedule_col_exists = False
+    if not schedule_col_exists:
+        # Attempt to auto-migrate on first update
+        try:
+            db.execute(text("ALTER TABLE reviews ADD COLUMN IF NOT EXISTS employee_scheduled_at TIMESTAMP NULL"))
+            db.commit()
+            schedule_col_exists = True
+        except Exception:
+            db.rollback()
+    if schedule_col_exists:
+        if schedule_val:
+            try:
+                # Expecting 'YYYY-MM-DDTHH:MM' from input[type=datetime-local]
+                parsed = datetime.strptime(schedule_val, "%Y-%m-%dT%H:%M")
+            except Exception:
+                from fastapi.responses import RedirectResponse
+                return RedirectResponse("/admin?error=Invalid%20date%20format", status_code=302)
+            # Find or create review
+            review = db.query(Review).options(
+                load_only(Review.id, Review.employee_id)
+            ).filter_by(employee_id=emp.id).first()
+            if not review:
+                review = Review(employee_id=emp.id)
+                db.add(review)
+                db.flush()
+            # Duplicate check: another review with same datetime
+            dup = db.execute(
+                text("SELECT 1 FROM reviews WHERE employee_scheduled_at = :dt AND employee_id <> CAST(:eid AS uuid) LIMIT 1"),
+                {"dt": parsed, "eid": str(emp.id)},
+            ).first()
+            if dup:
+                from fastapi.responses import RedirectResponse
+                return RedirectResponse("/admin?error=Time%20slot%20already%20taken", status_code=302)
+            # Update via direct SQL to avoid ORM selecting missing columns
+            if review and getattr(review, "id", None):
+                db.execute(
+                    text("UPDATE reviews SET employee_scheduled_at = :dt WHERE id = CAST(:id AS uuid)"),
+                    {"dt": parsed, "id": str(review.id)},
+                )
+            changed = True
+        else:
+            # Allow clearing the schedule
+            review = db.query(Review).options(
+                load_only(Review.id, Review.employee_id)
+            ).filter_by(employee_id=emp.id).first()
+            if review and getattr(review, "id", None):
+                db.execute(
+                    text("UPDATE reviews SET employee_scheduled_at = NULL WHERE id = CAST(:id AS uuid)"),
+                    {"id": str(review.id)},
+                )
+                changed = True
+
+    # Extended profile fields
+    extended = {
+        "department": department,
+        "position": position,
+        "years_months_with_mk": years_months_with_mk,
+        "pay_hr_last_3_years": pay_hr_last_3_years,
+        "loan_amount": loan_amount,
+        "lmia": lmia,
+        "company_phone": company_phone,
+        "company_laptop_ipad": company_laptop_ipad,
+        "drive_company_vehicle": drive_company_vehicle,
+        "company_gas_card": company_gas_card,
+        "skills_trade_completed": skills_trade_completed,
+        "safety_infraction_description": safety_infraction_description,
+    }
+    for key, val in extended.items():
+        if hasattr(emp, key):
+            v = (val or "").strip() or None
+            if getattr(emp, key) != v:
+                setattr(emp, key, v)
+                changed = True
+
+    if changed:
+        db.commit()
+
+    from fastapi.responses import RedirectResponse
+    target = (redirect_to or "").strip() or "/admin"
+    if "?" in target:
+        target += "&message=Saved"
+    else:
+        target += "?message=Saved"
+    return RedirectResponse(target, status_code=302)
 @router.post("/admin/create-employee")
 async def admin_create_employee(
     request: Request,
@@ -758,8 +723,9 @@ async def admin_create_employee(
     birth_date: str = Form(None),
     role: str = Form("employee"),
     supervisor_name: str = Form(None),
+    db: Session = Depends(get_db),
 ):
-    current_user = get_current_user(request)
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
@@ -776,98 +742,82 @@ async def admin_create_employee(
     email_val = (email or "").strip() or make_email_from_name(name_val)
     bd = _parse_birthdate(birth_date or "")
 
-    db: Session = SessionLocal()
-    try:
-        _ensure_deleted_at_column(db)
-        if db.query(Employee).filter(Employee.email == email_val).first():
-            return RedirectResponse("/admin?error=Email%20already%20registered", status_code=302)
+    _ensure_deleted_at_column(db)
+    if db.query(Employee).filter(Employee.email == email_val).first():
+        return RedirectResponse("/admin?error=Email%20already%20registered", status_code=302)
 
-        pwd = None
-        if role_val == "director":
-            # Not collected in UI; director-login password page still uses this env default if set
-            pwd = os.getenv("DEFAULT_DIRECTOR_PASSWORD", "directorpass")
+    pwd = None
+    if role_val == "director":
+        # Not collected in UI; director-login password page still uses this env default if set
+        pwd = os.getenv("DEFAULT_DIRECTOR_PASSWORD", "directorpass")
 
-        sup_name = (supervisor_name or "").strip() or None
-        emp = Employee(
-            name=name_val,
-            email=email_val,
-            birth_date=bd,
-            role=role_val,
-            password=pwd,
-            supervisor_email=sup_name,
-            is_supervisor=(role_val == "supervisor"),
-        )
-        db.add(emp)
-        if sup_name:
-            sup_emp = db.query(Employee).filter(Employee.name == sup_name, Employee.deleted_at.is_(None)).first()
-            if sup_emp and not sup_emp.is_supervisor:
-                sup_emp.is_supervisor = True
-        db.commit()
-        return RedirectResponse("/admin?message=" + name_val.replace(" ", "%20") + "%20registered", status_code=302)
-    finally:
-        db.close()
+    sup_name = (supervisor_name or "").strip() or None
+    emp = Employee(
+        name=name_val,
+        email=email_val,
+        birth_date=bd,
+        role=role_val,
+        password=pwd,
+        supervisor_email=sup_name,
+        is_supervisor=(role_val == "supervisor"),
+    )
+    db.add(emp)
+    if sup_name:
+        sup_emp = db.query(Employee).filter(Employee.name == sup_name, Employee.deleted_at.is_(None)).first()
+        if sup_emp and not sup_emp.is_supervisor:
+            sup_emp.is_supervisor = True
+    db.commit()
+    return RedirectResponse("/admin?message=" + name_val.replace(" ", "%20") + "%20registered", status_code=302)
 
 
 @router.post("/admin/employee/{employee_id}/deactivate")
-async def admin_deactivate_employee(request: Request, employee_id: str):
-    current_user = get_current_user(request)
+async def admin_deactivate_employee(request: Request, employee_id: str, db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
 
-    db: Session = SessionLocal()
-    try:
-        _ensure_deleted_at_column(db)
-        emp = db.query(Employee).filter_by(id=employee_id).first()
-        if not emp:
-            return HTMLResponse("Employee not found", status_code=404)
-        if getattr(emp, "deleted_at", None) is None:
-            emp.deleted_at = datetime.utcnow()
-            db.commit()
-        return RedirectResponse("/admin?message=" + (emp.name or "OK").replace(" ", "%20") + "%20marked%20as%20departed", status_code=302)
-    finally:
-        db.close()
+    _ensure_deleted_at_column(db)
+    emp = db.query(Employee).filter_by(id=employee_id).first()
+    if not emp:
+        return HTMLResponse("Employee not found", status_code=404)
+    if getattr(emp, "deleted_at", None) is None:
+        emp.deleted_at = datetime.utcnow()
+        db.commit()
+    return RedirectResponse("/admin?message=" + (emp.name or "OK").replace(" ", "%20") + "%20marked%20as%20departed", status_code=302)
 
 
 @router.post("/admin/employee/{employee_id}/restore")
-async def admin_restore_employee(request: Request, employee_id: str):
-    current_user = get_current_user(request)
+async def admin_restore_employee(request: Request, employee_id: str, db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
 
-    db: Session = SessionLocal()
-    try:
-        _ensure_deleted_at_column(db)
-        emp = db.query(Employee).filter_by(id=employee_id).first()
-        if not emp:
-            return HTMLResponse("Employee not found", status_code=404)
-        if getattr(emp, "deleted_at", None) is not None:
-            emp.deleted_at = None
-            db.commit()
-        return RedirectResponse("/admin/former?message=" + (emp.name or "OK").replace(" ", "%20") + "%20restored", status_code=302)
-    finally:
-        db.close()
+    _ensure_deleted_at_column(db)
+    emp = db.query(Employee).filter_by(id=employee_id).first()
+    if not emp:
+        return HTMLResponse("Employee not found", status_code=404)
+    if getattr(emp, "deleted_at", None) is not None:
+        emp.deleted_at = None
+        db.commit()
+    return RedirectResponse("/admin/former?message=" + (emp.name or "OK").replace(" ", "%20") + "%20restored", status_code=302)
 
 
 @router.get("/admin/former", response_class=HTMLResponse)
-async def admin_former_employees(request: Request):
-    current_user = get_current_user(request)
+async def admin_former_employees(request: Request, db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
 
-    db: Session = SessionLocal()
-    try:
-        _ensure_deleted_at_column(db)
-        former = db.query(Employee).filter(Employee.deleted_at.isnot(None)).order_by(Employee.deleted_at.desc()).all()
-        return templates.TemplateResponse(request, "admin_former.html", {
-            "employees": former,
-            "message": request.query_params.get("message"),
-            "error": request.query_params.get("error"),
-        })
-    finally:
-        db.close()
+    _ensure_deleted_at_column(db)
+    former = db.query(Employee).filter(Employee.deleted_at.isnot(None)).order_by(Employee.deleted_at.desc()).all()
+    return templates.TemplateResponse(request, "admin_former.html", {
+        "employees": former,
+        "message": request.query_params.get("message"),
+        "error": request.query_params.get("error"),
+    })
 
 
 @router.post("/admin/update-safety-role-ack/{employee_id}")
@@ -876,39 +826,37 @@ async def admin_update_safety_role_ack(
     employee_id: str,
     safety_role_ack_signed: str = Form(None),
     safety_role_ack_signed_at: str = Form(None),
+    db: Session = Depends(get_db),
 ):
-    current_user = get_current_user(request)
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
-    db: Session = SessionLocal()
-    try:
-        _ensure_safety_ack_columns(db)
-        emp = db.query(Employee).filter_by(id=employee_id).first()
-        if not emp:
-            return HTMLResponse("Employee not found", status_code=404)
-        signed = (safety_role_ack_signed or "").strip().lower() in ("1", "on", "true", "yes")
-        date_str = (safety_role_ack_signed_at or "").strip()
-        emp.safety_role_ack_signed = signed
-        if signed:
-            if date_str:
-                try:
-                    emp.safety_role_ack_signed_at = datetime.strptime(date_str[:10], "%Y-%m-%d").date()
-                except ValueError:
-                    return RedirectResponse("/admin?error=Invalid%20acknowledgment%20date", status_code=302)
-            else:
-                emp.safety_role_ack_signed_at = date_type.today()
+
+    _ensure_safety_ack_columns(db)
+    emp = db.query(Employee).filter_by(id=employee_id).first()
+    if not emp:
+        return HTMLResponse("Employee not found", status_code=404)
+    signed = (safety_role_ack_signed or "").strip().lower() in ("1", "on", "true", "yes")
+    date_str = (safety_role_ack_signed_at or "").strip()
+    emp.safety_role_ack_signed = signed
+    if signed:
+        if date_str:
+            try:
+                emp.safety_role_ack_signed_at = datetime.strptime(date_str[:10], "%Y-%m-%d").date()
+            except ValueError:
+                return RedirectResponse("/admin?error=Invalid%20acknowledgment%20date", status_code=302)
         else:
-            emp.safety_role_ack_signed_at = None
-        db.commit()
-        return RedirectResponse("/admin?message=Safety%20acknowledgment%20updated", status_code=302)
-    finally:
-        db.close()
+            emp.safety_role_ack_signed_at = date_type.today()
+    else:
+        emp.safety_role_ack_signed_at = None
+    db.commit()
+    return RedirectResponse("/admin?message=Safety%20acknowledgment%20updated", status_code=302)
 
 
 @router.post("/admin/bulk-update-supervisors", response_class=HTMLResponse)
-async def admin_bulk_update_supervisors(request: Request):
-    current_user = get_current_user(request)
+async def admin_bulk_update_supervisors(request: Request, db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
@@ -929,32 +877,27 @@ async def admin_bulk_update_supervisors(request: Request):
     if not updates:
         from fastapi.responses import RedirectResponse
         return RedirectResponse("/admin?error=No%20changes%20provided", status_code=302)
-
-    db: Session = SessionLocal()
     changed = 0
-    try:
-        for emp_id, sup_name in updates.items():
-            emp = db.query(Employee).filter_by(id=emp_id).first()
-            if not emp:
-                continue
-            if emp.supervisor_email != (sup_name or None):
-                emp.supervisor_email = sup_name or None
-                if sup_name:
-                    sup_emp = db.query(Employee).filter(Employee.name == sup_name).first()
-                    if sup_emp and not sup_emp.is_supervisor:
-                        sup_emp.is_supervisor = True
-                changed += 1
-        if changed:
-            db.commit()
-        from fastapi.responses import RedirectResponse
-        return RedirectResponse(f"/admin?message=Updated:%20{changed}", status_code=302)
-    finally:
-        db.close()
+    for emp_id, sup_name in updates.items():
+        emp = db.query(Employee).filter_by(id=emp_id).first()
+        if not emp:
+            continue
+        if emp.supervisor_email != (sup_name or None):
+            emp.supervisor_email = sup_name or None
+            if sup_name:
+                sup_emp = db.query(Employee).filter(Employee.name == sup_name).first()
+                if sup_emp and not sup_emp.is_supervisor:
+                    sup_emp.is_supervisor = True
+            changed += 1
+    if changed:
+        db.commit()
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(f"/admin?message=Updated:%20{changed}", status_code=302)
 
 
 @router.post("/admin/bulk-update-roles", response_class=HTMLResponse)
-async def admin_bulk_update_roles(request: Request):
-    current_user = get_current_user(request)
+async def admin_bulk_update_roles(request: Request, db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
@@ -976,28 +919,24 @@ async def admin_bulk_update_roles(request: Request):
     if not updates:
         from fastapi.responses import RedirectResponse
         return RedirectResponse("/admin?error=No%20changes%20provided", status_code=302)
-
-    db: Session = SessionLocal()
     changed = 0
-    try:
-        for emp_id, role_val in updates.items():
-            emp = db.query(Employee).filter_by(id=emp_id).first()
-            if not emp:
-                continue
-            if emp.role != role_val:
-                emp.role = role_val
-                if role_val == "supervisor":
-                    if not emp.is_supervisor:
-                        emp.is_supervisor = True
-                else:
-                    if emp.is_supervisor:
-                        emp.is_supervisor = False
-                changed += 1
-        if changed:
-            db.commit()
-        return RedirectResponse(f"/admin?message=Updated:%20{changed}", status_code=302)
-    finally:
-        db.close()
+    for emp_id, role_val in updates.items():
+        emp = db.query(Employee).filter_by(id=emp_id).first()
+        if not emp:
+            continue
+        if emp.role != role_val:
+            emp.role = role_val
+            if role_val == "supervisor":
+                if not emp.is_supervisor:
+                    emp.is_supervisor = True
+            else:
+                if emp.is_supervisor:
+                    emp.is_supervisor = False
+            changed += 1
+    if changed:
+        db.commit()
+    return RedirectResponse(f"/admin?message=Updated:%20{changed}", status_code=302)
+
 
 # CSV columns for employees export/import (same order for round-trip)
 EMPLOYEES_CSV_COLUMNS = [
@@ -1010,70 +949,67 @@ EMPLOYEES_CSV_COLUMNS = [
 
 
 @router.get("/admin/employees/export")
-async def admin_export_employees(request: Request):
-    current_user = get_current_user(request)
+async def admin_export_employees(request: Request, db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
-    db: Session = SessionLocal()
-    try:
-        _ensure_safety_ack_columns(db)
-        _ensure_deleted_at_column(db)
-        employees = db.query(Employee).order_by(Employee.name).all()
-        # Get current review's employee_scheduled_at per employee
-        review_sched = {}
-        for emp in employees:
-            r = db.query(Review).filter_by(employee_id=emp.id).first()
-            if r and getattr(r, "employee_scheduled_at", None):
-                review_sched[str(emp.id)] = r.employee_scheduled_at.strftime("%Y-%m-%d %H:%M")
-            else:
-                review_sched[str(emp.id)] = ""
 
-        buf = io.StringIO()
-        writer = csv.writer(buf)
-        writer.writerow(EMPLOYEES_CSV_COLUMNS)
-        for emp in employees:
-            birth = emp.birth_date.strftime("%Y-%m-%d") if emp.birth_date else ""
-            row = [
-                str(emp.id),
-                emp.name or "",
-                emp.email or "",
-                birth,
-                emp.supervisor_email or "",
-                "true" if emp.is_supervisor else "false",
-                emp.role or "employee",
-                emp.department or "",
-                emp.position or "",
-                emp.years_months_with_mk or "",
-                emp.pay_hr_last_3_years or "",
-                emp.loan_amount or "",
-                emp.lmia or "",
-                emp.company_phone or "",
-                emp.company_laptop_ipad or "",
-                emp.drive_company_vehicle or "",
-                emp.company_gas_card or "",
-                emp.skills_trade_completed or "",
-                emp.safety_infraction_description or "",
-                "true" if getattr(emp, "safety_role_ack_signed", None) else "false",
-                emp.safety_role_ack_signed_at.strftime("%Y-%m-%d") if getattr(emp, "safety_role_ack_signed_at", None) else "",
-                review_sched.get(str(emp.id), ""),
-                emp.deleted_at.strftime("%Y-%m-%d %H:%M:%S") if getattr(emp, "deleted_at", None) else "",
-            ]
-            writer.writerow(row)
-        buf.seek(0)
-        output = io.BytesIO(buf.getvalue().encode("utf-8-sig"))
-        return StreamingResponse(
-            output,
-            media_type="text/csv",
-            headers={"Content-Disposition": "attachment; filename=employees_export.csv"},
-        )
-    finally:
-        db.close()
+    _ensure_safety_ack_columns(db)
+    _ensure_deleted_at_column(db)
+    employees = db.query(Employee).order_by(Employee.name).all()
+    # Get current review's employee_scheduled_at per employee
+    review_sched = {}
+    for emp in employees:
+        r = db.query(Review).filter_by(employee_id=emp.id).first()
+        if r and getattr(r, "employee_scheduled_at", None):
+            review_sched[str(emp.id)] = r.employee_scheduled_at.strftime("%Y-%m-%d %H:%M")
+        else:
+            review_sched[str(emp.id)] = ""
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(EMPLOYEES_CSV_COLUMNS)
+    for emp in employees:
+        birth = emp.birth_date.strftime("%Y-%m-%d") if emp.birth_date else ""
+        row = [
+            str(emp.id),
+            emp.name or "",
+            emp.email or "",
+            birth,
+            emp.supervisor_email or "",
+            "true" if emp.is_supervisor else "false",
+            emp.role or "employee",
+            emp.department or "",
+            emp.position or "",
+            emp.years_months_with_mk or "",
+            emp.pay_hr_last_3_years or "",
+            emp.loan_amount or "",
+            emp.lmia or "",
+            emp.company_phone or "",
+            emp.company_laptop_ipad or "",
+            emp.drive_company_vehicle or "",
+            emp.company_gas_card or "",
+            emp.skills_trade_completed or "",
+            emp.safety_infraction_description or "",
+            "true" if getattr(emp, "safety_role_ack_signed", None) else "false",
+            emp.safety_role_ack_signed_at.strftime("%Y-%m-%d") if getattr(emp, "safety_role_ack_signed_at", None) else "",
+            review_sched.get(str(emp.id), ""),
+            emp.deleted_at.strftime("%Y-%m-%d %H:%M:%S") if getattr(emp, "deleted_at", None) else "",
+        ]
+        writer.writerow(row)
+    buf.seek(0)
+    output = io.BytesIO(buf.getvalue().encode("utf-8-sig"))
+    return StreamingResponse(
+        output,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=employees_export.csv"},
+    )
 
 
 @router.post("/admin/employees/import")
-async def admin_import_employees(request: Request, file: UploadFile = File(...)):
-    current_user = get_current_user(request)
+async def admin_import_employees(request: Request, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return RedirectResponse("/admin?error=Access%20restricted", status_code=302)
@@ -1087,7 +1023,6 @@ async def admin_import_employees(request: Request, file: UploadFile = File(...))
             text_content = content.decode("latin-1").strip()
         except Exception:
             return RedirectResponse("/admin?error=Invalid%20CSV%20encoding", status_code=302)
-    db: Session = SessionLocal()
     try:
         _ensure_safety_ack_columns(db)
         _ensure_deleted_at_column(db)
@@ -1201,13 +1136,11 @@ async def admin_import_employees(request: Request, file: UploadFile = File(...))
     except Exception as e:
         db.rollback()
         return RedirectResponse("/admin?error=Import%20error:%20" + str(e).replace(" ", "%20")[:80], status_code=302)
-    finally:
-        db.close()
 
 
 @router.get("/admin/open-review/{employee_id}")
-async def admin_open_review(request: Request, employee_id: str):
-    current_user = get_current_user(request)
+async def admin_open_review(request: Request, employee_id: str, db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
@@ -1216,23 +1149,20 @@ async def admin_open_review(request: Request, employee_id: str):
     if not (base_url.startswith("http://") or base_url.startswith("https://")):
         base_url = "https://" + base_url
     base_url = base_url.rstrip("/")
-    db: Session = SessionLocal()
-    try:
-        emp = db.query(Employee).filter_by(id=employee_id).first()
-        if not emp:
-            return HTMLResponse("Employee not found", status_code=404)
-        # Redirect to home after logging in as the selected user (for testing session as that user)
-        token = generate_magic_login_token(str(emp.id), redirect_url="/home", role=emp.role)
-        link = f"{base_url}/magic-login?token={token}"
-        from fastapi.responses import RedirectResponse
-        return RedirectResponse(link, status_code=302)
-    finally:
-        db.close()
+
+    emp = db.query(Employee).filter_by(id=employee_id).first()
+    if not emp:
+        return HTMLResponse("Employee not found", status_code=404)
+    # Redirect to home after logging in as the selected user (for testing session as that user)
+    token = generate_magic_login_token(str(emp.id), redirect_url="/home", role=emp.role)
+    link = f"{base_url}/magic-login?token={token}"
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(link, status_code=302)
 
 
 @router.get("/admin/questions", response_class=HTMLResponse)
-async def admin_questions_editor(request: Request, role: str = "employee"):
-    current_user = get_current_user(request)
+async def admin_questions_editor(request: Request, role: str = "employee", db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
@@ -1250,8 +1180,13 @@ async def admin_questions_editor(request: Request, role: str = "employee"):
 
 
 @router.post("/admin/questions", response_class=HTMLResponse)
-async def admin_questions_save(request: Request, role: str = Form("employee"), json_text: str = Form("", alias="json")):
-    current_user = get_current_user(request)
+async def admin_questions_save(
+    request: Request,
+    role: str = Form("employee"),
+    json_text: str = Form("", alias="json"),
+    db: Session = Depends(get_db),
+):
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
@@ -1307,8 +1242,8 @@ async def admin_questions_save(request: Request, role: str = Form("employee"), j
     return RedirectResponse(f"/admin/questions?role={role}&message=Saved", status_code=302)
 
 @router.get("/admin/ui", response_class=HTMLResponse)
-async def admin_ui_editor(request: Request):
-    current_user = get_current_user(request)
+async def admin_ui_editor(request: Request, db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
@@ -1399,10 +1334,17 @@ async def admin_ui_editor(request: Request):
     })
 
 @router.post("/admin/ui", response_class=HTMLResponse)
-async def admin_ui_save(request: Request, rating_panel_html: str = Form(""), instructions_html: str = Form(""),
-                        employee_email_subject: str = Form(""), employee_email_html: str = Form(""),
-                        supervisor_email_subject: str = Form(""), supervisor_email_html: str = Form("")):
-    current_user = get_current_user(request)
+async def admin_ui_save(
+    request: Request,
+    rating_panel_html: str = Form(""),
+    instructions_html: str = Form(""),
+    employee_email_subject: str = Form(""),
+    employee_email_html: str = Form(""),
+    supervisor_email_subject: str = Form(""),
+    supervisor_email_html: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
@@ -1433,8 +1375,13 @@ async def admin_ui_save(request: Request, rating_panel_html: str = Form(""), ins
     return RedirectResponse("/admin/ui?message=Saved", status_code=302)
 
 @router.post("/admin/ui/preview", response_class=HTMLResponse)
-async def admin_ui_preview(request: Request, rating_panel_html: str = Form(""), instructions_html: str = Form("")):
-    current_user = get_current_user(request)
+async def admin_ui_preview(
+    request: Request,
+    rating_panel_html: str = Form(""),
+    instructions_html: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)
@@ -1444,8 +1391,13 @@ async def admin_ui_preview(request: Request, rating_panel_html: str = Form(""), 
     })
 
 @router.post("/admin/questions/preview", response_class=HTMLResponse)
-async def admin_questions_preview(request: Request, role: str = Form("employee"), json_text: str = Form("", alias="json")):
-    current_user = get_current_user(request)
+async def admin_questions_preview(
+    request: Request,
+    role: str = Form("employee"),
+    json_text: str = Form("", alias="json"),
+    db: Session = Depends(get_db),
+):
+    current_user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((current_user and current_user.role == "director") or is_admin):
         return HTMLResponse("Access restricted", status_code=403)

@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Request
+# Sessions are request-scoped via get_db(); never call SessionLocal() inside handlers.
+from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from app.db import SessionLocal
+
+from app.db import get_db
 from app.models import Employee, Review
 from app.utils.questions import get_questions_for_role
 from app.utils.ui_overrides import get_rating_panel_html, get_instructions_html
@@ -15,14 +17,17 @@ from sqlalchemy.orm import load_only
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
-@router.get("/employee/{employee_id}", response_class=HTMLResponse)
-async def employee_review(request: Request, employee_id: str):
 
-    current_user = get_current_user(request)
+@router.get("/employee/{employee_id}", response_class=HTMLResponse)
+async def employee_review(
+    request: Request,
+    employee_id: str,
+    db: Session = Depends(get_db),
+):
+    current_user = get_current_user(request, db)
     if not current_user or str(current_user.id) != employee_id:
         return HTMLResponse("Access denied", status_code=403)
 
-    db: Session = SessionLocal()
     employee = db.query(Employee).filter_by(id=employee_id).first()
     review = db.query(Review).options(
         load_only(
@@ -39,7 +44,6 @@ async def employee_review(request: Request, employee_id: str):
     existing = review.employee_answers if review else None
     existing_map = {a["question"]: a.get("value") for a in existing} if existing else {}
     readonly = bool(existing)
-    db.close()
     if not employee:
         return HTMLResponse("Employee not found", status_code=404)
     selected_questions = get_questions_for_role(employee.role)
@@ -55,18 +59,18 @@ async def employee_review(request: Request, employee_id: str):
     })
 
 
-
 @router.post("/employee/{employee_id}/submit")
-async def submit_employee_review(request: Request, employee_id: str):
-    db: Session = SessionLocal()
-
-    current_user = get_current_user(request)
+async def submit_employee_review(
+    request: Request,
+    employee_id: str,
+    db: Session = Depends(get_db),
+):
+    current_user = get_current_user(request, db)
     if not current_user or str(current_user.id) != employee_id:
         return HTMLResponse("Access denied", status_code=403)
 
     employee = db.query(Employee).filter_by(id=employee_id).first()
     if not employee:
-        db.close()
         return HTMLResponse("Employee not found", status_code=404)
 
     from app.utils.questions import get_questions_for_role
@@ -92,7 +96,6 @@ async def submit_employee_review(request: Request, employee_id: str):
         load_only(Review.id, Review.employee_id, Review.employee_answers, Review.created_at, Review.updated_at)
     ).filter_by(employee_id=employee.id).first()
     if existing and existing.employee_answers:
-        db.close()
         return HTMLResponse("Review already submitted", status_code=400)
     elif existing:
         existing.employee_answers = answers
@@ -108,7 +111,6 @@ async def submit_employee_review(request: Request, employee_id: str):
         db.add(review)
 
     db.commit()
-    db.close()
 
     return templates.TemplateResponse(
         request,

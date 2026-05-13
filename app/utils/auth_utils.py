@@ -1,41 +1,19 @@
-from typing import Optional
-
 from sqlalchemy.orm import Session
 
-from app.db import SessionLocal
 from app.models import Employee
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 import os
 
 
-def get_current_user(request, db: Optional[Session] = None):
-    """
-    Returns the logged-in Employee or None.
-
-    Pass the request-scoped session from Depends(get_db) as db so this helper
-    does not open a second connection. If db is omitted, a short-lived session
-    is used (backward compatible until all routes are migrated).
-    """
+def get_current_user(request, db: Session):
+    """Resolve logged-in Employee from session cookie using the request-scoped DB session."""
     user_id = request.session.get("user_id")
     if not user_id:
         return None
-
-    if db is not None:
-        user = db.query(Employee).filter_by(id=user_id).first()
-        if user and getattr(user, "deleted_at", None) is not None:
-            return None
-        return user
-
-    own = SessionLocal()
-    try:
-        user = own.query(Employee).filter_by(id=user_id).first()
-        if user and getattr(user, "deleted_at", None) is not None:
-            return None
-        if user is not None:
-            own.expunge(user)
-        return user
-    finally:
-        own.close()
+    user = db.query(Employee).filter_by(id=user_id).first()
+    if user and getattr(user, "deleted_at", None) is not None:
+        return None
+    return user
 
 
 def _get_serializer() -> URLSafeTimedSerializer:

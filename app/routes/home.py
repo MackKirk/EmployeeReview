@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Request, Form
+# Sessions are request-scoped via get_db(); never call SessionLocal() inside handlers.
+from fastapi import APIRouter, Request, Form, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from app.db import SessionLocal
+
+from app.db import get_db
 from app.models import Employee, Review, EmailEvent
 from app.utils.auth_utils import get_current_user
 from app.utils.auth_utils import generate_magic_login_token
@@ -15,13 +17,12 @@ from sqlalchemy.orm import load_only
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
+
 @router.get("/home", response_class=HTMLResponse)
-async def home(request: Request):
-    user = get_current_user(request)
+async def home(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
     if not user:
         return HTMLResponse("Access denied", status_code=403)
-
-    db: Session = SessionLocal()
 
     # Review of the logged in user
     review = db.query(Review).options(
@@ -78,8 +79,6 @@ async def home(request: Request):
             if r.employee_answers and r.supervisor_answers and not r.director_comments:
                 director_pending += 1
 
-    db.close()
-
     return templates.TemplateResponse(request, "home.html", {
         "user": user,
         "employee_card_title": employee_card_title,
@@ -91,22 +90,18 @@ async def home(request: Request):
 
 
 @router.post("/admin/seed")
-async def admin_seed(request: Request):
-    user = get_current_user(request)
+async def admin_seed(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((user and user.role == "director") or is_admin):
         return HTMLResponse("Access denied", status_code=403)
-    db: Session = SessionLocal()
-    try:
-        result = seed_employees_from_csv(db)
-        if not result.get("ok"):
-            return HTMLResponse(f"Seed failed: {result.get('error')}", status_code=500)
-        return HTMLResponse(
-            f"Seeded from {result['path']}. Rows: {result['rows']}, created: {result['created']}, supervisor links: {result['updated']}",
-            status_code=200,
-        )
-    finally:
-        db.close()
+    result = seed_employees_from_csv(db)
+    if not result.get("ok"):
+        return HTMLResponse(f"Seed failed: {result.get('error')}", status_code=500)
+    return HTMLResponse(
+        f"Seeded from {result['path']}. Rows: {result['rows']}, created: {result['created']}, supervisor links: {result['updated']}",
+        status_code=200,
+    )
 
 
 @router.get("/setup/seed", response_class=HTMLResponse)
@@ -115,7 +110,7 @@ async def seed_setup_form(request: Request):
 
 
 @router.post("/setup/seed", response_class=HTMLResponse)
-async def seed_setup_submit(request: Request, password: str = Form("")):
+async def seed_setup_submit(request: Request, password: str = Form(""), db: Session = Depends(get_db)):
     expected = os.getenv("SEED_PASSWORD", "seedme")
     if password != expected:
         return templates.TemplateResponse(
@@ -124,31 +119,27 @@ async def seed_setup_submit(request: Request, password: str = Form("")):
             {"error": "Invalid password."},
             status_code=401,
         )
-    db: Session = SessionLocal()
-    try:
-        result = seed_employees_from_csv(db)
-        if not result.get("ok"):
-            return templates.TemplateResponse(
-                request,
-                "seed_setup.html",
-                {"error": f"Seed failed: {result.get('error')}"},
-                status_code=500,
-            )
+    result = seed_employees_from_csv(db)
+    if not result.get("ok"):
         return templates.TemplateResponse(
             request,
             "seed_setup.html",
-            {
-                "success": f"Seeded from {result['path']}. Rows: {result['rows']}, created: {result['created']}, supervisor links: {result['updated']}"
-            },
-            status_code=200,
+            {"error": f"Seed failed: {result.get('error')}"},
+            status_code=500,
         )
-    finally:
-        db.close()
+    return templates.TemplateResponse(
+        request,
+        "seed_setup.html",
+        {
+            "success": f"Seeded from {result['path']}. Rows: {result['rows']}, created: {result['created']}, supervisor links: {result['updated']}"
+        },
+        status_code=200,
+    )
 
 
 @router.post("/admin/send-test-email")
-async def admin_send_test_email(request: Request, to: str = Form("")):
-    user = get_current_user(request)
+async def admin_send_test_email(request: Request, to: str = Form(""), db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((user and user.role == "director") or is_admin):
         return HTMLResponse("Access denied", status_code=403)
@@ -167,15 +158,14 @@ async def admin_send_test_email(request: Request, to: str = Form("")):
         f"<p>Base URL: {base_url}</p>"
     )
     ok, err = send_email_verbose(to, subject, html)
-    from fastapi.responses import RedirectResponse
     if ok:
         return RedirectResponse(f"/admin?message=Test%20email%20sent%20to%20{to}", status_code=302)
     return RedirectResponse(f"/admin?error=SMTP%20failed:%20{(err or '').replace(' ', '%20')}", status_code=302)
 
 
 @router.post("/admin/send-review-link/{employee_id}")
-async def admin_send_review_link(request: Request, employee_id: str):
-    user = get_current_user(request)
+async def admin_send_review_link(request: Request, employee_id: str, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((user and user.role == "director") or is_admin):
         return HTMLResponse("Access denied", status_code=403)
@@ -184,91 +174,84 @@ async def admin_send_review_link(request: Request, employee_id: str):
     if not (base_url.startswith("http://") or base_url.startswith("https://")):
         base_url = "https://" + base_url
     base_url = base_url.rstrip("/")
-    db: Session = SessionLocal()
-    try:
-        emp = db.query(Employee).filter_by(id=employee_id).first()
-        if not emp:
-            return HTMLResponse("Employee not found", status_code=404)
-        if getattr(emp, "deleted_at", None) is not None:
-            return RedirectResponse("/admin?error=Employee%20is%20archived", status_code=302)
-        if not emp.email:
-            return HTMLResponse("Employee has no email", status_code=400)
 
+    emp = db.query(Employee).filter_by(id=employee_id).first()
+    if not emp:
+        return HTMLResponse("Employee not found", status_code=404)
+    if getattr(emp, "deleted_at", None) is not None:
+        return RedirectResponse("/admin?error=Employee%20is%20archived", status_code=302)
+    if not emp.email:
+        return HTMLResponse("Employee has no email", status_code=400)
+
+    token = generate_magic_login_token(str(emp.id), redirect_url=f"/employee/{emp.id}", role=emp.role)
+    link = f"{base_url}/magic-login?token={token}"
+    # Supervisor dashboard link for supervisors - redirects to /home to show choice
+    sup_link = None
+    if emp.role == "supervisor" or emp.is_supervisor:
+        sup_token = generate_magic_login_token(str(emp.id), redirect_url="/home", role=emp.role, never_expires=True)
+        sup_link = f"{base_url}/magic-login?token={sup_token}"
+    subject = "Employee Review Notice"
+    html = build_review_invite_email(emp.name, link, base_url, supervisor_link=sup_link, is_supervisor=(emp.role == "supervisor" or emp.is_supervisor))
+    ok, err = send_email_verbose(emp.email, subject, html)
+    if not ok:
+        return RedirectResponse(f"/admin?error=SMTP%20failed:%20{(err or '').replace(' ', '%20')}", status_code=302)
+    try:
+        evt = EmailEvent(employee_id=emp.id, event_type="sent")
+        db.add(evt)
+        db.commit()
+    except Exception:
+        db.rollback()
+    # Redirect back to admin page with a flash-like message via querystring
+    return RedirectResponse(f"/admin?message={quote('Email sent to ' + emp.name)}", status_code=302)
+
+
+@router.post("/admin/send-review-links")
+async def admin_send_review_links(request: Request, db: Session = Depends(get_db), role: str = Form(None)):
+    user = get_current_user(request, db)
+    is_admin = bool(request.session.get("is_admin"))
+    if not ((user and user.role == "director") or is_admin):
+        return HTMLResponse("Access denied", status_code=403)
+
+    base_url = os.getenv("APP_BASE_URL", "http://localhost:8000")
+    if not (base_url.startswith("http://") or base_url.startswith("https://")):
+        base_url = "https://" + base_url
+    base_url = base_url.rstrip("/")
+
+    q = db.query(Employee).filter(Employee.deleted_at.is_(None))
+    if role:
+        q = q.filter(Employee.role == role)
+    employees = q.all()
+    sent = 0
+    skipped = 0
+    for emp in employees:
+        if not emp.email:
+            skipped += 1
+            continue
         token = generate_magic_login_token(str(emp.id), redirect_url=f"/employee/{emp.id}", role=emp.role)
         link = f"{base_url}/magic-login?token={token}"
-        # Supervisor dashboard link for supervisors - redirects to /home to show choice
         sup_link = None
         if emp.role == "supervisor" or emp.is_supervisor:
             sup_token = generate_magic_login_token(str(emp.id), redirect_url="/home", role=emp.role, never_expires=True)
             sup_link = f"{base_url}/magic-login?token={sup_token}"
         subject = "Employee Review Notice"
         html = build_review_invite_email(emp.name, link, base_url, supervisor_link=sup_link, is_supervisor=(emp.role == "supervisor" or emp.is_supervisor))
-        ok, err = send_email_verbose(emp.email, subject, html)
-        from fastapi.responses import RedirectResponse
-        if not ok:
-            return RedirectResponse(f"/admin?error=SMTP%20failed:%20{(err or '').replace(' ', '%20')}", status_code=302)
-        try:
-            evt = EmailEvent(employee_id=emp.id, event_type="sent")
-            db.add(evt)
-            db.commit()
-        except Exception:
-            db.rollback()
-        # Redirect back to admin page with a flash-like message via querystring
-        return RedirectResponse(f"/admin?message={quote('Email sent to ' + emp.name)}", status_code=302)
-    finally:
-        db.close()
-
-
-@router.post("/admin/send-review-links")
-async def admin_send_review_links(request: Request, role: str = Form(None)):
-    user = get_current_user(request)
-    is_admin = bool(request.session.get("is_admin"))
-    if not ((user and user.role == "director") or is_admin):
-        return HTMLResponse("Access denied", status_code=403)
-
-    base_url = os.getenv("APP_BASE_URL", "http://localhost:8000")
-    if not (base_url.startswith("http://") or base_url.startswith("https://")):
-        base_url = "https://" + base_url
-    base_url = base_url.rstrip("/")
-    db: Session = SessionLocal()
-    try:
-        q = db.query(Employee).filter(Employee.deleted_at.is_(None))
-        if role:
-            q = q.filter(Employee.role == role)
-        employees = q.all()
-        sent = 0
-        skipped = 0
-        for emp in employees:
-            if not emp.email:
-                skipped += 1
-                continue
-            token = generate_magic_login_token(str(emp.id), redirect_url=f"/employee/{emp.id}", role=emp.role)
-            link = f"{base_url}/magic-login?token={token}"
-            sup_link = None
-            if emp.role == "supervisor" or emp.is_supervisor:
-                sup_token = generate_magic_login_token(str(emp.id), redirect_url="/home", role=emp.role, never_expires=True)
-                sup_link = f"{base_url}/magic-login?token={sup_token}"
-            subject = "Employee Review Notice"
-            html = build_review_invite_email(emp.name, link, base_url, supervisor_link=sup_link, is_supervisor=(emp.role == "supervisor" or emp.is_supervisor))
-            ok = send_email(emp.email, subject, html)
-            if ok:
-                sent += 1
-                try:
-                    evt = EmailEvent(employee_id=emp.id, event_type="sent")
-                    db.add(evt)
-                    db.commit()
-                except Exception:
-                    db.rollback()
-            else:
-                skipped += 1
-        return HTMLResponse(f"Emails sent: {sent}. Skipped: {skipped}. Role filter: {role or 'all'}.", status_code=200)
-    finally:
-        db.close()
+        ok = send_email(emp.email, subject, html)
+        if ok:
+            sent += 1
+            try:
+                evt = EmailEvent(employee_id=emp.id, event_type="sent")
+                db.add(evt)
+                db.commit()
+            except Exception:
+                db.rollback()
+        else:
+            skipped += 1
+    return HTMLResponse(f"Emails sent: {sent}. Skipped: {skipped}. Role filter: {role or 'all'}.", status_code=200)
 
 
 @router.post("/admin/send-reminders")
-async def admin_send_reminders(request: Request):
-    user = get_current_user(request)
+async def admin_send_reminders(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
     is_admin = bool(request.session.get("is_admin"))
     if not ((user and user.role == "director") or is_admin):
         return HTMLResponse("Access denied", status_code=403)
@@ -277,42 +260,39 @@ async def admin_send_reminders(request: Request):
     if not (base_url.startswith("http://") or base_url.startswith("https://")):
         base_url = "https://" + base_url
     base_url = base_url.rstrip("/")
-    db: Session = SessionLocal()
-    try:
-        employees = db.query(Employee).filter(Employee.deleted_at.is_(None)).all()
-        sent = 0
-        skipped = 0
-        for emp in employees:
-            if not emp.email:
-                skipped += 1
-                continue
-            
-            # Check if employee has already completed the review
-            review = db.query(Review).filter_by(employee_id=emp.id).first()
-            if review and review.employee_answers:
-                # Already completed, skip
-                skipped += 1
-                continue
-            
-            token = generate_magic_login_token(str(emp.id), redirect_url=f"/employee/{emp.id}", role=emp.role)
-            link = f"{base_url}/magic-login?token={token}"
-            sup_link = None
-            if emp.role == "supervisor" or emp.is_supervisor:
-                sup_token = generate_magic_login_token(str(emp.id), redirect_url="/home", role=emp.role, never_expires=True)
-                sup_link = f"{base_url}/magic-login?token={sup_token}"
-            subject = "Reminder: Employee Review Notice"
-            html = build_review_invite_email(emp.name, link, base_url, supervisor_link=sup_link, is_supervisor=(emp.role == "supervisor" or emp.is_supervisor))
-            ok = send_email(emp.email, subject, html)
-            if ok:
-                sent += 1
-                try:
-                    evt = EmailEvent(employee_id=emp.id, event_type="sent")
-                    db.add(evt)
-                    db.commit()
-                except Exception:
-                    db.rollback()
-            else:
-                skipped += 1
-        return HTMLResponse(f"Reminder emails sent: {sent}. Skipped: {skipped} (already completed or no email).", status_code=200)
-    finally:
-        db.close()
+
+    employees = db.query(Employee).filter(Employee.deleted_at.is_(None)).all()
+    sent = 0
+    skipped = 0
+    for emp in employees:
+        if not emp.email:
+            skipped += 1
+            continue
+
+        # Check if employee has already completed the review
+        review = db.query(Review).filter_by(employee_id=emp.id).first()
+        if review and review.employee_answers:
+            # Already completed, skip
+            skipped += 1
+            continue
+
+        token = generate_magic_login_token(str(emp.id), redirect_url=f"/employee/{emp.id}", role=emp.role)
+        link = f"{base_url}/magic-login?token={token}"
+        sup_link = None
+        if emp.role == "supervisor" or emp.is_supervisor:
+            sup_token = generate_magic_login_token(str(emp.id), redirect_url="/home", role=emp.role, never_expires=True)
+            sup_link = f"{base_url}/magic-login?token={sup_token}"
+        subject = "Reminder: Employee Review Notice"
+        html = build_review_invite_email(emp.name, link, base_url, supervisor_link=sup_link, is_supervisor=(emp.role == "supervisor" or emp.is_supervisor))
+        ok = send_email(emp.email, subject, html)
+        if ok:
+            sent += 1
+            try:
+                evt = EmailEvent(employee_id=emp.id, event_type="sent")
+                db.add(evt)
+                db.commit()
+            except Exception:
+                db.rollback()
+        else:
+            skipped += 1
+    return HTMLResponse(f"Reminder emails sent: {sent}. Skipped: {skipped} (already completed or no email).", status_code=200)
