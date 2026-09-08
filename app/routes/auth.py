@@ -29,27 +29,34 @@ async def login(
     db: Session = Depends(get_db),
     name: str = Form(...),
     birth_date: str = Form(None),
-    password: str = Form(None),
     required_role: str = Form(None),
 ):
+    name = (name or "").strip()
+    director_only = required_role == "director"
     user = db.query(Employee).filter(Employee.name == name).first()
     if not user:
-        return templates.TemplateResponse(request, "login.html", {"error": "User not found."})
+        return templates.TemplateResponse(
+            request,
+            "login.html",
+            {"error": "User not found.", "director_only": director_only},
+        )
 
     if getattr(user, "deleted_at", None) is not None:
-        return templates.TemplateResponse(request, "login.html", {"error": "Access denied.", "director_only": required_role == "director"})
+        return templates.TemplateResponse(
+            request,
+            "login.html",
+            {"error": "Access denied.", "director_only": director_only},
+        )
 
     if required_role and user.role != required_role:
-        return templates.TemplateResponse(request, "login.html", {"error": "Access restricted.", "director_only": required_role == "director"})
+        return templates.TemplateResponse(
+            request,
+            "login.html",
+            {"error": "Access restricted.", "director_only": director_only},
+        )
 
-    if required_role == "director":
-        if password != user.password:
-            return templates.TemplateResponse(
-                request,
-                "login.html",
-                {"error": "Invalid password.", "director_only": True},
-            )
-    else:
+    # Director login is name-only for now (no password).
+    if not director_only:
         expected = user.birth_date.strftime("%Y-%m-%d")
         if birth_date != expected:
             return templates.TemplateResponse(

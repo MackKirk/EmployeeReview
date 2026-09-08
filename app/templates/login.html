@@ -24,17 +24,15 @@
       </ul>
     </div>
 
+    {% if director_only %}
+    <input type="hidden" name="required_role" value="director">
+    {% else %}
     <div>
-      {% if director_only %}
-      <label class="block font-semibold">Password</label>
-      <input name="password" type="password" class="w-full p-2 border rounded" required />
-      <input type="hidden" name="required_role" value="director">
-      {% else %}
       <label class="block font-semibold">Birth Date</label>
       <input name="birth_date" type="date" class="w-full p-2 border rounded" required />
       <input type="hidden" name="required_role" value="">
-      {% endif %}
     </div>
+    {% endif %}
 
     <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Login</button>
   </form>

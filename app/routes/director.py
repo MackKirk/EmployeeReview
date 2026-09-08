@@ -748,7 +748,7 @@ async def admin_create_employee(
 
     pwd = None
     if role_val == "director":
-        # Not collected in UI; director-login password page still uses this env default if set
+        # Not collected in UI; stored for compatibility (director-login is name-only)
         pwd = os.getenv("DEFAULT_DIRECTOR_PASSWORD", "directorpass")
 
     sup_name = (supervisor_name or "").strip() or None
